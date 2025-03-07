@@ -2,6 +2,6 @@
 Retrievers for Glean LangChain integration.
 """
 
-from .search import GleanSearchRetriever
+from .search import GleanSearchParameters, GleanSearchRetriever
 
-__all__ = ["GleanSearchRetriever"] 
+__all__ = ["GleanSearchParameters", "GleanSearchRetriever"]

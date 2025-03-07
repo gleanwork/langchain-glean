@@ -1,5 +1,6 @@
-from typing import Dict, Any, Optional, Literal
 from json import JSONDecodeError
+from typing import Any, Dict, Literal, Optional
+
 import requests
 
 from .glean_auth import GleanAuth
@@ -31,7 +32,6 @@ class GleanClient:
         timeout: Optional[int] = DEFAULT_TIMEOUT,
         api_root: Literal[None, "index", "client"] = None,
     ):
-
         self.session = requests.Session()
         self.session.timeout = timeout
         self.session.headers = auth.get_headers()

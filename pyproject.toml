@@ -1,26 +1,53 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[project]
 name = "langchain-glean"
 version = "0.1.0"
 description = "An integration package connecting Glean and LangChain"
-authors = []
+authors = [
+    { name = "John Agan", email = "john.agan@glean.com" }, 
+    { name = "Steve Calvert", email = "steve.calvert@glean.com" }
+]
 readme = "README.md"
-repository = "https://github.com/langchain-ai/langchain"
-license = "MIT"
+license = {text = "MIT"}
+requires-python = ">=3.9,<4.0"
+dependencies = [
+    "langchain-core>=0.3.15",
+]
 
-[tool.mypy]
-disallow_untyped_defs = "True"
+[project.optional-dependencies]
+dev = []
+test = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.23.2",
+    "pytest-socket>=0.7.0",
+    "pytest-watcher>=0.3.4",
+    "langchain-tests>=0.3.5",
+]
+codespell = [
+    "codespell>=2.2.6",
+]
+test_integration = []
+lint = [
+    "ruff>=0.5",
+]
+typing = [
+    "mypy>=1.10",
+]
 
-[tool.poetry.urls]
+[project.urls]
 "Source Code" = "https://github.com/langchain-ai/langchain/tree/master/libs/partners/glean"
 "Release Notes" = "https://github.com/langchain-ai/langchain/releases?q=tag%3A%22glean%3D%3D0%22&expanded=true"
 
-[tool.poetry.dependencies]
-python = ">=3.9,<4.0"
-langchain-core = "^0.3.15"
+[tool.mypy]
+disallow_untyped_defs = "True"
+exclude = ["docs/"]
+
+[tool.ruff]
+line-length = 160
+exclude = ["docs/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "T201"]
@@ -34,38 +61,3 @@ markers = [
     "compile: mark placeholder test used to compile integration tests without running them",
 ]
 asyncio_mode = "auto"
-
-[tool.poetry.group.test]
-optional = true
-
-[tool.poetry.group.codespell]
-optional = true
-
-[tool.poetry.group.test_integration]
-optional = true
-
-[tool.poetry.group.lint]
-optional = true
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-
-[tool.poetry.group.test.dependencies]
-pytest = "^7.4.3"
-pytest-asyncio = "^0.23.2"
-pytest-socket = "^0.7.0"
-pytest-watcher = "^0.3.4"
-langchain-tests = "^0.3.5"
-
-[tool.poetry.group.codespell.dependencies]
-codespell = "^2.2.6"
-
-[tool.poetry.group.test_integration.dependencies]
-
-[tool.poetry.group.lint.dependencies]
-ruff = "^0.5"
-
-[tool.poetry.group.typing.dependencies]
-mypy = "^1.10"

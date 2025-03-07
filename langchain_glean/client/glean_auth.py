@@ -33,7 +33,6 @@ class GleanAuth:
         self.is_oauth = is_oauth
         self.act_as = act_as
 
-
     def get_base_url(self, path: str = "rest/api", version: str = "v1") -> str:
         """
         Return the base URL for the Glean API request.
@@ -54,7 +53,6 @@ class GleanAuth:
         if version:
             base_url += "/" + version
 
-        print(f"Constructed Glean API base URL: {base_url}")
         return base_url
 
     def get_headers(self) -> Dict[str, str]:
