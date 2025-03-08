@@ -7,8 +7,10 @@ from langchain_core.retrievers import BaseRetriever
 from pydantic import BaseModel, Field, PrivateAttr
 
 from langchain_glean.client import GleanAuth, GleanClient
+from langchain_glean.client.glean_client import GleanClientError, GleanConnectionError, GleanHTTPError
 
 DEFAULT_PAGE_SIZE = 100
+
 
 class GleanSearchParameters(BaseModel):
     """Parameters for Glean search API."""
@@ -89,9 +91,9 @@ class GleanSearchRetriever(BaseRetriever):
 
         .. code-block:: none
 
-            [Document(page_content='Sales increased by 15% in Q2...', 
+            [Document(page_content='Sales increased by 15% in Q2...',
                      metadata={'title': 'Q2 Sales Report', 'url': '...'}),
-             Document(page_content='Q1 results showed strong performance...', 
+             Document(page_content='Q1 results showed strong performance...',
                      metadata={'title': 'Q1 Sales Analysis', 'url': '...'})]
 
     Use within a chain:
@@ -177,7 +179,20 @@ class GleanSearchRetriever(BaseRetriever):
             params = GleanSearchParameters(**search_params)
             payload = params.to_dict()
 
-            search_results = self._client.post("search", data=json.dumps(payload), headers={"Content-Type": "application/json"})
+            try:
+                search_results = self._client.post("search", data=json.dumps(payload), headers={"Content-Type": "application/json"})
+            except GleanHTTPError as http_err:
+                error_details = f"HTTP Error {http_err.status_code}"
+                if http_err.response:
+                    error_details += f": {http_err.response}"
+                run_manager.on_retriever_error(f"Glean API error: {error_details}")
+                return []
+            except GleanConnectionError as conn_err:
+                run_manager.on_retriever_error(f"Glean connection error: {str(conn_err)}")
+                return []
+            except GleanClientError as client_err:
+                run_manager.on_retriever_error(f"Glean client error: {str(client_err)}")
+                return []
 
             documents = []
             for result in search_results.get("results", []):
@@ -219,9 +234,22 @@ class GleanSearchRetriever(BaseRetriever):
             import asyncio
 
             loop = asyncio.get_event_loop()
-            search_results = await loop.run_in_executor(
-                None, lambda: self._client.post("search", data=json.dumps(payload), headers={"Content-Type": "application/json"})
-            )
+            try:
+                search_results = await loop.run_in_executor(
+                    None, lambda: self._client.post("search", data=json.dumps(payload), headers={"Content-Type": "application/json"})
+                )
+            except GleanHTTPError as http_err:
+                error_details = f"HTTP Error {http_err.status_code}"
+                if http_err.response:
+                    error_details += f": {http_err.response}"
+                await run_manager.on_retriever_error(f"Glean API error: {error_details}")
+                return []
+            except GleanConnectionError as conn_err:
+                await run_manager.on_retriever_error(f"Glean connection error: {str(conn_err)}")
+                return []
+            except GleanClientError as client_err:
+                await run_manager.on_retriever_error(f"Glean client error: {str(client_err)}")
+                return []
 
             documents = []
             for result in search_results.get("results", []):

@@ -2,10 +2,32 @@ from json import JSONDecodeError
 from typing import Any, Dict, Literal, Optional
 
 import requests
+from requests.exceptions import HTTPError, RequestException
 
 from .glean_auth import GleanAuth
 
 DEFAULT_TIMEOUT = 60
+
+
+class GleanClientError(Exception):
+    """Base exception for GleanClient errors."""
+
+    pass
+
+
+class GleanHTTPError(GleanClientError):
+    """Exception raised for HTTP errors from the Glean API."""
+
+    def __init__(self, status_code: int, message: str, response: Optional[Dict[str, Any]] = None):
+        self.status_code = status_code
+        self.response = response
+        super().__init__(f"HTTP Error {status_code}: {message}")
+
+
+class GleanConnectionError(GleanClientError):
+    """Exception raised for connection errors when communicating with the Glean API."""
+
+    pass
 
 
 class GleanClient:
@@ -50,8 +72,20 @@ class GleanClient:
 
         Returns:
             Dict containing the API response
+
+        Raises:
+            GleanHTTPError: If the response contains an HTTP error
         """
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except HTTPError as e:
+            error_response = None
+            try:
+                error_response = response.json()
+            except JSONDecodeError:
+                pass
+
+            raise GleanHTTPError(status_code=response.status_code, message=str(e), response=error_response) from e
 
         body = None
 
@@ -72,11 +106,20 @@ class GleanClient:
 
         Returns:
             Dict containing the API response
+
+        Raises:
+            GleanHTTPError: If the response contains an HTTP error
+            GleanConnectionError: If there's a connection error
         """
         url = f"{self.base_url}/{endpoint}"
-        response = self.session.post(url, **kwargs)
-
-        return self.parse_response(response)
+        try:
+            response = self.session.post(url, **kwargs)
+            return self.parse_response(response)
+        except RequestException as e:
+            if isinstance(e, HTTPError):
+                # This is already handled in parse_response
+                raise
+            raise GleanConnectionError(f"Connection error when calling {endpoint}: {str(e)}") from e
 
     def get(self, endpoint, **kwargs):
         """
@@ -88,9 +131,17 @@ class GleanClient:
 
         Returns:
             Dict containing the API response
+
+        Raises:
+            GleanHTTPError: If the response contains an HTTP error
+            GleanConnectionError: If there's a connection error
         """
-
         url = f"{self.base_url}/{endpoint}"
-        response = self.session.get(url, **kwargs)
-
-        return self.parse_response(response)
+        try:
+            response = self.session.get(url, **kwargs)
+            return self.parse_response(response)
+        except RequestException as e:
+            if isinstance(e, HTTPError):
+                # This is already handled in parse_response
+                raise
+            raise GleanConnectionError(f"Connection error when calling {endpoint}: {str(e)}") from e

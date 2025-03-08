@@ -26,8 +26,8 @@ class TestGleanSearchTool(unittest.TestCase):
                 "doc_type": "Message",
                 "author": "John Doe",
                 "create_time": "2023-01-01T00:00:00Z",
-                "update_time": "2023-01-02T00:00:00Z"
-            }
+                "update_time": "2023-01-02T00:00:00Z",
+            },
         )
 
         # Set up the mock retriever to return the sample document
@@ -60,43 +60,21 @@ class TestGleanSearchTool(unittest.TestCase):
     def test_run_with_dict(self):
         """Test the _run method with a dictionary query."""
         # Call the method
-        result = self.tool._run({
-            "query": "test query",
-            "page_size": 20,
-            "disable_spellcheck": True,
-            "request_options": {
-                "facetFilters": [
-                    {
-                        "fieldName": "datasource",
-                        "values": [
-                            {
-                                "value": "slack",
-                                "relationType": "EQUALS"
-                            }
-                        ]
-                    }
-                ]
+        result = self.tool._run(
+            {
+                "query": "test query",
+                "page_size": 20,
+                "disable_spellcheck": True,
+                "request_options": {"facetFilters": [{"fieldName": "datasource", "values": [{"value": "slack", "relationType": "EQUALS"}]}]},
             }
-        })
+        )
 
         # Check that the retriever was called correctly
         self.mock_retriever.get_relevant_documents.assert_called_once_with(
             "test query",
             page_size=20,
             disable_spellcheck=True,
-            request_options={
-                "facetFilters": [
-                    {
-                        "fieldName": "datasource",
-                        "values": [
-                            {
-                                "value": "slack",
-                                "relationType": "EQUALS"
-                            }
-                        ]
-                    }
-                ]
-            }
+            request_options={"facetFilters": [{"fieldName": "datasource", "values": [{"value": "slack", "relationType": "EQUALS"}]}]},
         )
 
         # Check the result

@@ -14,13 +14,11 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
     def setUp(self):
         """Set up the test."""
-        # Create a mock GleanClient
+
         self.mock_client = MagicMock()
 
-        # Create a mock GleanAuth
         self.mock_auth = MagicMock()
 
-        # Create a sample search result
         self.sample_result = {
             "results": [
                 {
@@ -55,20 +53,16 @@ class TestGleanSearchRetriever(unittest.TestCase):
             ]
         }
 
-        # Set up the mock client to return the sample result
         self.mock_client.post.return_value = self.sample_result
 
-        # Create a patcher for the GleanAuth class
         self.auth_patcher = patch("langchain_glean.retrievers.search.GleanAuth")
         self.mock_auth_class = self.auth_patcher.start()
         self.mock_auth_class.return_value = self.mock_auth
 
-        # Create a patcher for the GleanClient class
         self.client_patcher = patch("langchain_glean.retrievers.search.GleanClient")
         self.mock_client_class = self.client_patcher.start()
         self.mock_client_class.return_value = self.mock_client
 
-        # Create the retriever
         self.retriever = GleanSearchRetriever(subdomain="test-glean", api_token="test-token", act_as="test@example.com")
 
     def tearDown(self):
@@ -82,35 +76,28 @@ class TestGleanSearchRetriever(unittest.TestCase):
         self.assertEqual(self.retriever.api_token, "test-token")
         self.assertEqual(self.retriever.act_as, "test@example.com")
 
-        # Check that the auth and client were created correctly
         self.mock_auth_class.assert_called_once_with(api_token="test-token", subdomain="test-glean", act_as="test@example.com")
         self.mock_client_class.assert_called_once_with(auth=self.mock_auth)
 
     def test_get_relevant_documents(self):
         """Test the get_relevant_documents method."""
-        # Call the method
         docs = self.retriever.get_relevant_documents("test query")
 
-        # Check that the client was called correctly
         self.mock_client.post.assert_called_once()
         call_args = self.mock_client.post.call_args
         self.assertEqual(call_args[0][0], "search")
 
-        # Check the payload
         payload = json.loads(call_args[1]["data"])
         self.assertEqual(payload["query"], "test query")
         self.assertEqual(payload["pageSize"], 100)
 
-        # Check the headers
         self.assertEqual(call_args[1]["headers"], {"Content-Type": "application/json"})
 
-        # Check the returned documents
         self.assertEqual(len(docs), 1)
         doc = docs[0]
         self.assertIsInstance(doc, Document)
         self.assertEqual(doc.page_content, "This is a sample snippet.\nThis is another sample snippet.")
 
-        # Check the metadata
         self.assertEqual(doc.metadata["title"], "Sample Document")
         self.assertEqual(doc.metadata["url"], "https://example.com/doc")
         self.assertEqual(doc.metadata["document_id"], "doc-123")
@@ -122,39 +109,24 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
     def test_get_relevant_documents_with_params(self):
         """Test the get_relevant_documents method with additional parameters."""
-        # Call the method with additional parameters
-        docs = self.retriever.get_relevant_documents(
+        self.retriever.get_relevant_documents(
             "test query",
             page_size=20,
             disable_spellcheck=True,
             max_snippet_size=100,
             request_options={
                 "facetFilters": [
-                    {
-                        "fieldName": "datasource",
-                        "values": [
-                            {
-                                "value": "slack",
-                                "relationType": "EQUALS"
-                            },
-                            {
-                                "value": "gdrive",
-                                "relationType": "EQUALS"
-                            }
-                        ]
-                    }
+                    {"fieldName": "datasource", "values": [{"value": "slack", "relationType": "EQUALS"}, {"value": "gdrive", "relationType": "EQUALS"}]}
                 ]
-            }
+            },
         )
-        
-        # Check the payload
+
         payload = json.loads(self.mock_client.post.call_args[1]["data"])
         self.assertEqual(payload["query"], "test query")
         self.assertEqual(payload["pageSize"], 20)
         self.assertEqual(payload["disableSpellcheck"], True)
         self.assertEqual(payload["maxSnippetSize"], 100)
-        
-        # Check facet filters
+
         facet_filters = payload["requestOptions"]["facetFilters"]
         self.assertEqual(len(facet_filters), 1)
         self.assertEqual(facet_filters[0]["fieldName"], "datasource")
@@ -166,17 +138,13 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
     def test_build_document(self):
         """Test the _build_document method."""
-        # Get the sample result
         result = self.sample_result["results"][0]
 
-        # Call the method
         doc = self.retriever._build_document(result)
 
-        # Check the document
         self.assertIsInstance(doc, Document)
         self.assertEqual(doc.page_content, "This is a sample snippet.\nThis is another sample snippet.")
 
-        # Check the metadata
         self.assertEqual(doc.metadata["title"], "Sample Document")
         self.assertEqual(doc.metadata["url"], "https://example.com/doc")
         self.assertEqual(doc.metadata["document_id"], "doc-123")

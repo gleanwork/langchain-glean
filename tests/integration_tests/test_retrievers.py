@@ -66,10 +66,8 @@ class TestGleanSearchTool(ToolsIntegrationTests):
             subdomain="test-glean",
             api_token="test-token",
         )
-        
-        return {
-            "retriever": retriever
-        }
+
+        return {"retriever": retriever}
 
     @property
     def tool_input_example(self) -> dict:
@@ -80,17 +78,5 @@ class TestGleanSearchTool(ToolsIntegrationTests):
             "query": "example query",
             "page_size": 100,
             "disable_spellcheck": True,
-            "request_options": {
-                "facetFilters": [
-                    {
-                        "fieldName": "datasource",
-                        "values": [
-                            {
-                                "value": "slack",
-                                "relationType": "EQUALS"
-                            }
-                        ]
-                    }
-                ]
-            }
+            "request_options": {"facetFilters": [{"fieldName": "datasource", "values": [{"value": "slack", "relationType": "EQUALS"}]}]},
         }
