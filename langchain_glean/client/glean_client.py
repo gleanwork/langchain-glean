@@ -96,7 +96,7 @@ class GleanClient:
 
         return body
 
-    def post(self, endpoint, **kwargs):
+    def post(self, endpoint: str, **kwargs: Any) -> Dict[str, Any]:
         """
         Send a POST request to the Glean API.
 
@@ -121,7 +121,7 @@ class GleanClient:
                 raise
             raise GleanConnectionError(f"Connection error when calling {endpoint}: {str(e)}") from e
 
-    def get(self, endpoint, **kwargs):
+    def get(self, endpoint: str, **kwargs: Any) -> Dict[str, Any]:
         """
         Send a GET request to the Glean API.
 

@@ -328,6 +328,7 @@ test = [
 ]
 typing = [
     { name = "mypy" },
+    { name = "types-requests" },
 ]
 
 [package.metadata]
@@ -341,6 +342,7 @@ requires-dist = [
     { name = "pytest-socket", marker = "extra == 'test'", specifier = ">=0.7.0" },
     { name = "pytest-watcher", marker = "extra == 'test'", specifier = ">=0.3.4" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.5" },
+    { name = "types-requests", marker = "extra == 'typing'", specifier = ">=2.31.0.1" },
 ]
 provides-extras = ["dev", "test", "codespell", "test-integration", "lint", "typing"]
 
@@ -992,6 +994,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/b9/1ed31d167be802da0fc95020d04cd27b7d7065cc6fbefdd2f9186f60d7bd/tomli-2.2.1-cp313-cp313-win32.whl", hash = "sha256:d3f5614314d758649ab2ab3a62d4f2004c825922f9e370b29416484086b264ec", size = 98724 },
     { url = "https://files.pythonhosted.org/packages/c7/32/b0963458706accd9afcfeb867c0f9175a741bf7b19cd424230714d722198/tomli-2.2.1-cp313-cp313-win_amd64.whl", hash = "sha256:a38aa0308e754b0e3c67e344754dff64999ff9b513e691d0e786265c93583c69", size = 109383 },
     { url = "https://files.pythonhosted.org/packages/6e/c2/61d3e0f47e2b74ef40a68b9e6ad5984f6241a942f7cd3bbfbdbd03861ea9/tomli-2.2.1-py3-none-any.whl", hash = "sha256:cb55c73c5f4408779d0cf3eef9f762b9c9f147a77de7b258bef0a5628adc85cc", size = 14257 },
+]
+
+[[package]]
+name = "types-requests"
+version = "2.32.0.20250306"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/09/1a/beaeff79ef9efd186566ba5f0d95b44ae21f6d31e9413bcfbef3489b6ae3/types_requests-2.32.0.20250306.tar.gz", hash = "sha256:0962352694ec5b2f95fda877ee60a159abdf84a0fc6fdace599f20acb41a03d1", size = 23012 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/99/26/645d89f56004aa0ba3b96fec27793e3c7e62b40982ee069e52568922b6db/types_requests-2.32.0.20250306-py3-none-any.whl", hash = "sha256:25f2cbb5c8710b2022f8bbee7b2b66f319ef14aeea2f35d80f18c9dbf3b60a0b", size = 20673 },
 ]
 
 [[package]]

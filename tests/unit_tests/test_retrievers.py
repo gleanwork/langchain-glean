@@ -12,7 +12,7 @@ from langchain_glean.retrievers import GleanSearchRetriever
 class TestGleanSearchRetriever(unittest.TestCase):
     """Test the GleanSearchRetriever class."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up the test."""
 
         self.mock_client = MagicMock()
@@ -65,12 +65,12 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
         self.retriever = GleanSearchRetriever(subdomain="test-glean", api_token="test-token", act_as="test@example.com")
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Tear down the test."""
         self.auth_patcher.stop()
         self.client_patcher.stop()
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test the initialization of the retriever."""
         self.assertEqual(self.retriever.subdomain, "test-glean")
         self.assertEqual(self.retriever.api_token, "test-token")
@@ -79,7 +79,7 @@ class TestGleanSearchRetriever(unittest.TestCase):
         self.mock_auth_class.assert_called_once_with(api_token="test-token", subdomain="test-glean", act_as="test@example.com")
         self.mock_client_class.assert_called_once_with(auth=self.mock_auth)
 
-    def test_get_relevant_documents(self):
+    def test_get_relevant_documents(self) -> None:
         """Test the get_relevant_documents method."""
         docs = self.retriever.get_relevant_documents("test query")
 
@@ -107,7 +107,7 @@ class TestGleanSearchRetriever(unittest.TestCase):
         self.assertEqual(doc.metadata["create_time"], "2023-01-01T00:00:00Z")
         self.assertEqual(doc.metadata["update_time"], "2023-01-02T00:00:00Z")
 
-    def test_get_relevant_documents_with_params(self):
+    def test_get_relevant_documents_with_params(self) -> None:
         """Test the get_relevant_documents method with additional parameters."""
         self.retriever.get_relevant_documents(
             "test query",
@@ -136,7 +136,7 @@ class TestGleanSearchRetriever(unittest.TestCase):
         self.assertEqual(facet_filters[0]["values"][1]["value"], "gdrive")
         self.assertEqual(facet_filters[0]["values"][1]["relationType"], "EQUALS")
 
-    def test_build_document(self):
+    def test_build_document(self) -> None:
         """Test the _build_document method."""
         result = self.sample_result["results"][0]
 

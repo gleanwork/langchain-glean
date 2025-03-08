@@ -138,7 +138,7 @@ class GleanSearchRetriever(BaseRetriever):
     _auth: GleanAuth = PrivateAttr()
     _client: GleanClient = PrivateAttr()
 
-    def __init__(self, subdomain: str, api_token: str, act_as: Optional[str] = None):
+    def __init__(self, subdomain: str, api_token: str, act_as: Optional[str] = None) -> None:
         """Initialize the GleanRetriever.
 
         Args:
@@ -156,7 +156,7 @@ class GleanSearchRetriever(BaseRetriever):
         except Exception as e:
             raise ValueError(f"Failed to initialize Glean client: {str(e)}")
 
-    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun, **kwargs) -> List[Document]:
+    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun, **kwargs: Any) -> List[Document]:
         """Get documents relevant to the query using Glean's search API via the Glean client.
 
         Args:
@@ -209,7 +209,7 @@ class GleanSearchRetriever(BaseRetriever):
             run_manager.on_retriever_error(f"Error during retrieval: {str(e)}")
             return []
 
-    async def _aget_relevant_documents(self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun, **kwargs) -> List[Document]:
+    async def _aget_relevant_documents(self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun, **kwargs: Any) -> List[Document]:
         """Get documents relevant to the query using Glean's search API via the Glean client (async version).
 
         Args:

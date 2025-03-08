@@ -5,7 +5,8 @@ from langchain_tests.integration_tests import (
     ToolsIntegrationTests,
 )
 
-from langchain_glean.retrievers import GleanSearchRetriever, GleanSearchTool
+from langchain_glean.retrievers import GleanSearchRetriever
+from langchain_glean.tools import GleanSearchTool
 
 
 class TestGleanRetriever(RetrieversIntegrationTests):
