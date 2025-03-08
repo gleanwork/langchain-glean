@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      run_integration_tests:
+        description: 'Run integration tests'
+        type: boolean
+        default: false
+      glean_subdomain:
+        description: 'Glean subdomain (for integration tests)'
+        required: false
+      glean_api_token:
+        description: 'Glean API token (for integration tests)'
+        required: false
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install go-task
+      uses: arduino/setup-task@v1
+      with:
+        version: 3.x
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up uv
+      uses: astral-sh/setup-uv-action@v1
+      
+    - name: Setup development environment
+      run: task setup
+        
+    - name: Run tests
+      run: task test
+
+  lint:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        
+    - name: Install go-task
+      uses: arduino/setup-task@v1
+      with:
+        version: 3.x
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up uv
+      uses: astral-sh/setup-uv-action@v1
+      
+    - name: Setup development environment
+      run: task setup
+        
+    - name: Run linters
+      run: task lint
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    if: github.event.inputs.run_integration_tests == 'true'
+    needs: [test, lint]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        
+    - name: Install go-task
+      uses: arduino/setup-task@v1
+      with:
+        version: 3.x
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up uv
+      uses: astral-sh/setup-uv-action@v1
+      
+    - name: Setup development environment
+      run: task setup
+        
+    - name: Run integration tests
+      env:
+        GLEAN_SUBDOMAIN: ${{ github.event.inputs.glean_subdomain }}
+        GLEAN_API_TOKEN: ${{ github.event.inputs.glean_api_token }}
+      run: task integration:tests
