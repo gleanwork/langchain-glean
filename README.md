@@ -15,9 +15,8 @@ You need to configure your Glean credentials by setting the following environmen
 ```bash
 export GLEAN_SUBDOMAIN="your-glean-subdomain"
 export GLEAN_API_TOKEN="your-api-token"
+export GLEAN_ACT_AS="user@example.com"  # Optional: Email to act as when making requests
 ```
-
-Alternatively, you can provide these credentials directly when initializing the components.
 
 ## Usage
 
@@ -28,15 +27,11 @@ The `GleanSearchRetriever` allows you to search and retrieve documents from Glea
 ```python
 from langchain_glean.retrievers import GleanSearchRetriever
 
-# Initialize the retriever
-retriever = GleanSearchRetriever(
-    subdomain="my-glean",  # Your Glean subdomain
-    api_token="your-api-token",  # Your Glean API token
-    act_as="user@example.com"  # Optional: Email to act as when making requests
-)
+# Initialize the retriever (will use environment variables)
+retriever = GleanSearchRetriever()
 
 # Search for documents
-documents = retriever.get_relevant_documents("quarterly sales report")
+documents = retriever.invoke("quarterly sales report")
 
 # Process the results
 for doc in documents:
@@ -57,11 +52,8 @@ from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_glean.retrievers import GleanSearchRetriever
 from langchain_glean.tools import GleanSearchTool
 
-# Initialize the retriever
-retriever = GleanSearchRetriever(
-    subdomain="my-glean",
-    api_token="your-api-token"
-)
+# Initialize the retriever (will use environment variables)
+retriever = GleanSearchRetriever()
 
 # Create the tool
 glean_tool = GleanSearchTool(
@@ -96,11 +88,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI
 from langchain_glean.retrievers import GleanSearchRetriever
 
-# Initialize the retriever
-retriever = GleanSearchRetriever(
-    subdomain="my-glean",
-    api_token="your-api-token"
-)
+# Initialize the retriever (will use environment variables)
+retriever = GleanSearchRetriever()
 
 # Create a prompt template
 prompt = ChatPromptTemplate.from_template(
@@ -139,7 +128,7 @@ You can customize your search by passing additional parameters:
 
 ```python
 # Search with additional parameters
-documents = retriever.get_relevant_documents(
+documents = retriever.invoke(
     "quarterly sales report",
     page_size=5,  # Number of results to return
     disable_spellcheck=True,  # Disable spellcheck

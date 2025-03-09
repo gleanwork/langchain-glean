@@ -92,8 +92,8 @@ class TestGleanSearchRetriever(unittest.TestCase):
         with self.assertRaises(ValueError):
             GleanSearchRetriever()
 
-    def test_get_relevant_documents(self) -> None:
-        """Test the get_relevant_documents method."""
+    def test_invoke(self) -> None:
+        """Test the invoke method."""
         docs = self.retriever.invoke("test query")
 
         self.mock_client.post.assert_called_once()
@@ -120,8 +120,8 @@ class TestGleanSearchRetriever(unittest.TestCase):
         self.assertEqual(doc.metadata["create_time"], "2023-01-01T00:00:00Z")
         self.assertEqual(doc.metadata["update_time"], "2023-01-02T00:00:00Z")
 
-    def test_get_relevant_documents_with_params(self) -> None:
-        """Test the get_relevant_documents method with additional parameters."""
+    def test_invoke_with_params(self) -> None:
+        """Test the invoke method with additional parameters."""
         self.retriever.invoke(
             "test query",
             page_size=20,
