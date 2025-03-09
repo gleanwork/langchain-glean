@@ -43,6 +43,13 @@ tasks:
     status:
       - test -d ".venv"
 
+  # Test and lint task: Run tests and linters
+  test:all:
+    desc: Run all tests and lint fixes
+    cmds:
+      - task: test
+      - task: lint:fix 
+
   # Test task: Run unit tests
   test:
     aliases: [tests]
@@ -213,16 +220,3 @@ tasks:
         sh: find langchain_glean -name '*.py' | grep -v "docs/"
     cmds:
       - "{{.PYTHON}} ./scripts/check_imports.py {{.IMPORT_FILES}}"
-      
-  # Test and lint task: Run tests and linters
-  test:all:
-    desc: Run all tests and lint fixes
-    cmds:
-      - task: test
-      - task: lint:fix 
-
-  # Verify uv task: Verify that uv is working correctly
-  verify:uv:
-    desc: Verify that uv is working correctly
-    cmds:
-      - "{{.PYTHON}} scripts/verify_uv.py" 
