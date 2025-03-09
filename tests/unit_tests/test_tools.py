@@ -31,8 +31,8 @@ class TestGleanSearchTool(unittest.TestCase):
         )
 
         # Set up the mock retriever to return the sample document
-        self.mock_retriever.get_relevant_documents.return_value = [self.sample_doc]
-        self.mock_retriever.aget_relevant_documents.return_value = [self.sample_doc]
+        self.mock_retriever.invoke.return_value = [self.sample_doc]
+        self.mock_retriever.ainvoke.return_value = [self.sample_doc]
 
         # Create the tool
         self.tool = GleanSearchTool(retriever=self.mock_retriever)
@@ -49,7 +49,7 @@ class TestGleanSearchTool(unittest.TestCase):
         result = self.tool._run("test query")
 
         # Check that the retriever was called correctly
-        self.mock_retriever.get_relevant_documents.assert_called_once_with("test query")
+        self.mock_retriever.invoke.assert_called_once_with("test query")
 
         # Check the result
         self.assertIn("Result 1:", result)
@@ -70,7 +70,7 @@ class TestGleanSearchTool(unittest.TestCase):
         )
 
         # Check that the retriever was called correctly
-        self.mock_retriever.get_relevant_documents.assert_called_once_with(
+        self.mock_retriever.invoke.assert_called_once_with(
             "test query",
             page_size=20,
             disable_spellcheck=True,
@@ -86,7 +86,7 @@ class TestGleanSearchTool(unittest.TestCase):
     def test_run_with_no_results(self) -> None:
         """Test the _run method when no results are found."""
         # Set up the mock retriever to return no documents
-        self.mock_retriever.get_relevant_documents.return_value = []
+        self.mock_retriever.invoke.return_value = []
 
         # Call the method
         result = self.tool._run("test query")
@@ -97,7 +97,7 @@ class TestGleanSearchTool(unittest.TestCase):
     def test_run_with_error(self) -> None:
         """Test the _run method when an error occurs."""
         # Set up the mock retriever to raise an exception
-        self.mock_retriever.get_relevant_documents.side_effect = Exception("Test error")
+        self.mock_retriever.invoke.side_effect = Exception("Test error")
 
         # Call the method
         result = self.tool._run("test query")
@@ -111,7 +111,7 @@ class TestGleanSearchTool(unittest.TestCase):
         result = await self.tool._arun("test query")
 
         # Check that the retriever was called correctly
-        self.mock_retriever.aget_relevant_documents.assert_called_once_with("test query")
+        self.mock_retriever.ainvoke.assert_called_once_with("test query")
 
         # Check the result
         self.assertIn("Result 1:", result)

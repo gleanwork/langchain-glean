@@ -1,7 +1,7 @@
 from typing import Any, Dict, Union
 
-from langchain_core.pydantic_v1 import Field
 from langchain_core.tools import BaseTool
+from pydantic import Field
 
 from langchain_glean.client.glean_client import GleanClientError, GleanConnectionError, GleanHTTPError
 from langchain_glean.retrievers import GleanSearchRetriever
@@ -30,18 +30,31 @@ class GleanSearchTool(BaseTool):
             A formatted string with the search results
         """
         try:
+            search_kwargs: Dict[str, Any] = {}
+
             if isinstance(query, str):
-                search_params = {"query": query}
+                query_text = query
             else:
-                search_params = query
+                if "query" not in query:
+                    return "Error: Search query is required"
 
-            if "query" not in search_params:
-                return "Error: Search query is required"
+                query_text = query.pop("query")
 
-            query_text = search_params.pop("query")
+                for key, value in query.items():
+                    if key in [
+                        "page_size",
+                        "cursor",
+                        "disable_spellcheck",
+                        "max_snippet_size",
+                        "result_tab_ids",
+                        "timeout_millis",
+                        "tracking_token",
+                        "request_options",
+                    ]:
+                        search_kwargs[key] = value
 
             try:
-                docs = self.retriever.get_relevant_documents(query_text, **search_params)
+                docs = self.retriever.invoke(query_text, **search_kwargs)
             except GleanHTTPError as http_err:
                 error_details = f"HTTP Error {http_err.status_code}"
                 if http_err.response:
@@ -78,18 +91,31 @@ class GleanSearchTool(BaseTool):
             A formatted string with the search results
         """
         try:
+            search_kwargs: Dict[str, Any] = {}
+
             if isinstance(query, str):
-                search_params = {"query": query}
+                query_text = query
             else:
-                search_params = query
+                if "query" not in query:
+                    return "Error: Search query is required"
 
-            if "query" not in search_params:
-                return "Error: Search query is required"
+                query_text = query.pop("query")
 
-            query_text = search_params.pop("query")
+                for key, value in query.items():
+                    if key in [
+                        "page_size",
+                        "cursor",
+                        "disable_spellcheck",
+                        "max_snippet_size",
+                        "result_tab_ids",
+                        "timeout_millis",
+                        "tracking_token",
+                        "request_options",
+                    ]:
+                        search_kwargs[key] = value
 
             try:
-                docs = await self.retriever.aget_relevant_documents(query_text, **search_params)
+                docs = await self.retriever.ainvoke(query_text, **search_kwargs)
             except GleanHTTPError as http_err:
                 error_details = f"HTTP Error {http_err.status_code}"
                 if http_err.response:

@@ -1,5 +1,5 @@
 from json import JSONDecodeError
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, Union, cast
 
 import requests
 from requests.exceptions import HTTPError, RequestException
@@ -55,8 +55,8 @@ class GleanClient:
         api_root: Literal[None, "index", "client"] = None,
     ):
         self.session = requests.Session()
-        self.session.timeout = timeout
-        self.session.headers = auth.get_headers()
+        self._timeout = timeout
+        self.session.headers.update(cast(Dict[str, str], auth.get_headers()))
 
         if api_root is None or api_root == "client":
             self.base_url = auth.get_base_url("rest/api")
@@ -87,13 +87,15 @@ class GleanClient:
 
             raise GleanHTTPError(status_code=response.status_code, message=str(e), response=error_response) from e
 
-        body = None
+        body: Union[Dict[str, Any], str] = {}
 
         try:
             body = response.json()
         except JSONDecodeError:
             body = response.text
 
+        if isinstance(body, str):
+            return {"text": body}
         return body
 
     def post(self, endpoint: str, **kwargs: Any) -> Dict[str, Any]:

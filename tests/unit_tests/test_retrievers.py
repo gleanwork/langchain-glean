@@ -1,6 +1,5 @@
-"""Unit tests for Glean retrievers."""
-
 import json
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -14,9 +13,12 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the test."""
+        # Set environment variables for testing
+        os.environ["GLEAN_SUBDOMAIN"] = "test-glean"
+        os.environ["GLEAN_API_TOKEN"] = "test-token"
+        os.environ["GLEAN_ACT_AS"] = "test@example.com"
 
         self.mock_client = MagicMock()
-
         self.mock_auth = MagicMock()
 
         self.sample_result = {
@@ -63,12 +65,15 @@ class TestGleanSearchRetriever(unittest.TestCase):
         self.mock_client_class = self.client_patcher.start()
         self.mock_client_class.return_value = self.mock_client
 
-        self.retriever = GleanSearchRetriever(subdomain="test-glean", api_token="test-token", act_as="test@example.com")
+        self.retriever = GleanSearchRetriever()
 
     def tearDown(self) -> None:
         """Tear down the test."""
         self.auth_patcher.stop()
         self.client_patcher.stop()
+        # Clean up environment variables
+        for var in ["GLEAN_SUBDOMAIN", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
+            os.environ.pop(var, None)  # Use pop with None as default to avoid KeyError
 
     def test_init(self) -> None:
         """Test the initialization of the retriever."""
@@ -79,9 +84,17 @@ class TestGleanSearchRetriever(unittest.TestCase):
         self.mock_auth_class.assert_called_once_with(api_token="test-token", subdomain="test-glean", act_as="test@example.com")
         self.mock_client_class.assert_called_once_with(auth=self.mock_auth)
 
+    def test_init_with_missing_env_vars(self) -> None:
+        """Test initialization with missing environment variables."""
+        del os.environ["GLEAN_SUBDOMAIN"]
+        del os.environ["GLEAN_API_TOKEN"]
+
+        with self.assertRaises(ValueError):
+            GleanSearchRetriever()
+
     def test_get_relevant_documents(self) -> None:
         """Test the get_relevant_documents method."""
-        docs = self.retriever.get_relevant_documents("test query")
+        docs = self.retriever.invoke("test query")
 
         self.mock_client.post.assert_called_once()
         call_args = self.mock_client.post.call_args
@@ -109,7 +122,7 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
     def test_get_relevant_documents_with_params(self) -> None:
         """Test the get_relevant_documents method with additional parameters."""
-        self.retriever.get_relevant_documents(
+        self.retriever.invoke(
             "test query",
             page_size=20,
             disable_spellcheck=True,

@@ -4,7 +4,8 @@ from typing import Any, Dict, List, Optional
 from langchain_core.callbacks import AsyncCallbackManagerForRetrieverRun, CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from pydantic import BaseModel, Field, PrivateAttr
+from langchain_core.utils import get_from_dict_or_env
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from langchain_glean.client import GleanAuth, GleanClient
 from langchain_glean.client.glean_client import GleanClientError, GleanConnectionError, GleanHTTPError
@@ -26,7 +27,6 @@ class GleanSearchParameters(BaseModel):
     request_options: Optional[Dict[str, Any]] = Field(default=None, description="Additional request options including facet filters")
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert parameters to a dictionary for the API request."""
         result = {k: v for k, v in self.model_dump().items() if v is not None}
 
         camel_case_result = {}
@@ -64,23 +64,12 @@ class GleanSearchRetriever(BaseRetriever):
             export GLEAN_API_TOKEN="your-api-token"
             export GLEAN_SUBDOMAIN="your-glean-subdomain"
 
-    Key init args:
-        subdomain: str
-            Subdomain for Glean instance (e.g., 'my-glean')
-        api_token: str
-            API token for Glean
-        act_as: Optional[str]
-            Email for the user to act as when making requests to Glean
-
-    Instantiate:
+    Example:
         .. code-block:: python
 
             from langchain_glean.retrievers import GleanSearchRetriever
 
-            retriever = GleanSearchRetriever(
-                subdomain="my-glean",
-                api_token="your-api-token",
-            )
+            retriever = GleanSearchRetriever()  # Will use environment variables
 
     Usage:
         .. code-block:: python
@@ -131,30 +120,77 @@ class GleanSearchRetriever(BaseRetriever):
             "Based on the provided context, sales increased by 15% in Q2."
     """
 
-    subdomain: str = Field(description="Subdomain for Glean instance (e.g., 'my-glean')")
+    subdomain: str = Field(description="Subdomain for Glean instance")
     api_token: str = Field(description="API token for Glean")
-    act_as: Optional[str] = Field(default=None, description="Email for the user to act as when making requests to Glean")
+    act_as: Optional[str] = Field(default=None, description="Email for the user to act as")
 
     _auth: GleanAuth = PrivateAttr()
     _client: GleanClient = PrivateAttr()
 
-    def __init__(self, subdomain: str, api_token: str, act_as: Optional[str] = None) -> None:
-        """Initialize the GleanRetriever.
+    @model_validator(mode="before")
+    @classmethod
+    def validate_environment(cls, values: Dict) -> Dict:
+        """Validate that api key and subdomain exists in environment.
 
         Args:
-            subdomain: Subdomain for Glean instance (e.g., 'my-glean')
-            api_token: API token for Glean
-            act_as: Email for the user to act as when making requests to Glean
-        """
+            values: The values to validate.
 
-        super().__init__(subdomain=subdomain, api_token=api_token, act_as=act_as)
+        Returns:
+            The validated values.
+
+        Raises:
+            ValueError: If api key or subdomain are not found in environment.
+        """
+        values = values or {}
+        values["subdomain"] = get_from_dict_or_env(values, "subdomain", "GLEAN_SUBDOMAIN")
+        values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
+        values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", None)
+
+        return values
+
+    def __init__(self) -> None:
+        """Initialize the retriever.
+
+        All required values are pulled from environment variables during model validation.
+        """
+        super().__init__()
 
         try:
             self._auth = GleanAuth(api_token=self.api_token, subdomain=self.subdomain, act_as=self.act_as)
             self._client = GleanClient(auth=self._auth)
-
         except Exception as e:
             raise ValueError(f"Failed to initialize Glean client: {str(e)}")
+
+    def _build_search_params(self, query: str, **kwargs: Any) -> Dict[str, Any]:
+        """Build the search parameters dictionary for the Glean API request.
+
+        Args:
+            query: The query to search for
+            **kwargs: Additional keyword arguments that can include any parameters from GleanSearchParameters
+
+        Returns:
+            A dictionary containing the search parameters in the format expected by the Glean API
+        """
+        search_params: Dict[str, Any] = {"query": query}
+
+        if "page_size" not in kwargs:
+            search_params["page_size"] = DEFAULT_PAGE_SIZE
+
+        for key, value in kwargs.items():
+            search_params[key] = value
+
+        params = GleanSearchParameters(
+            query=search_params["query"],
+            page_size=search_params.get("page_size"),
+            cursor=search_params.get("cursor"),
+            disable_spellcheck=search_params.get("disable_spellcheck"),
+            max_snippet_size=search_params.get("max_snippet_size"),
+            result_tab_ids=search_params.get("result_tab_ids"),
+            timeout_millis=search_params.get("timeout_millis"),
+            tracking_token=search_params.get("tracking_token"),
+            request_options=search_params.get("request_options"),
+        )
+        return params.to_dict()
 
     def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun, **kwargs: Any) -> List[Document]:
         """Get documents relevant to the query using Glean's search API via the Glean client.
@@ -169,15 +205,7 @@ class GleanSearchRetriever(BaseRetriever):
         """
 
         try:
-            search_params = {"query": query}
-
-            if "page_size" not in kwargs:
-                search_params["page_size"] = DEFAULT_PAGE_SIZE
-
-            search_params.update(kwargs)
-
-            params = GleanSearchParameters(**search_params)
-            payload = params.to_dict()
+            payload = self._build_search_params(query, **kwargs)
 
             try:
                 search_results = self._client.post("search", data=json.dumps(payload), headers={"Content-Type": "application/json"})
@@ -185,13 +213,13 @@ class GleanSearchRetriever(BaseRetriever):
                 error_details = f"HTTP Error {http_err.status_code}"
                 if http_err.response:
                     error_details += f": {http_err.response}"
-                run_manager.on_retriever_error(f"Glean API error: {error_details}")
+                run_manager.on_retriever_error(Exception(f"Glean API error: {error_details}"))
                 return []
             except GleanConnectionError as conn_err:
-                run_manager.on_retriever_error(f"Glean connection error: {str(conn_err)}")
+                run_manager.on_retriever_error(Exception(f"Glean connection error: {str(conn_err)}"))
                 return []
             except GleanClientError as client_err:
-                run_manager.on_retriever_error(f"Glean client error: {str(client_err)}")
+                run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
                 return []
 
             documents = []
@@ -200,13 +228,13 @@ class GleanSearchRetriever(BaseRetriever):
                     document = self._build_document(result)
                     documents.append(document)
                 except Exception as doc_error:
-                    run_manager.on_retriever_error(f"Error processing document: {str(doc_error)}")
+                    run_manager.on_retriever_error(doc_error)
                     continue
 
             return documents
 
         except Exception as e:
-            run_manager.on_retriever_error(f"Error during retrieval: {str(e)}")
+            run_manager.on_retriever_error(e)
             return []
 
     async def _aget_relevant_documents(self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun, **kwargs: Any) -> List[Document]:
@@ -221,15 +249,7 @@ class GleanSearchRetriever(BaseRetriever):
             A list of documents relevant to the query
         """
         try:
-            search_params = {"query": query}
-
-            if "page_size" not in kwargs:
-                search_params["page_size"] = DEFAULT_PAGE_SIZE
-
-            search_params.update(kwargs)
-
-            params = GleanSearchParameters(**search_params)
-            payload = params.to_dict()
+            payload = self._build_search_params(query, **kwargs)
 
             import asyncio
 
@@ -242,13 +262,13 @@ class GleanSearchRetriever(BaseRetriever):
                 error_details = f"HTTP Error {http_err.status_code}"
                 if http_err.response:
                     error_details += f": {http_err.response}"
-                await run_manager.on_retriever_error(f"Glean API error: {error_details}")
+                await run_manager.on_retriever_error(Exception(f"Glean API error: {error_details}"))
                 return []
             except GleanConnectionError as conn_err:
-                await run_manager.on_retriever_error(f"Glean connection error: {str(conn_err)}")
+                await run_manager.on_retriever_error(Exception(f"Glean connection error: {str(conn_err)}"))
                 return []
             except GleanClientError as client_err:
-                await run_manager.on_retriever_error(f"Glean client error: {str(client_err)}")
+                await run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
                 return []
 
             documents = []
@@ -257,13 +277,13 @@ class GleanSearchRetriever(BaseRetriever):
                     document = self._build_document(result)
                     documents.append(document)
                 except Exception as doc_error:
-                    await run_manager.on_retriever_error(f"Error processing document: {str(doc_error)}")
+                    await run_manager.on_retriever_error(doc_error)
                     continue
 
             return documents
 
         except Exception as e:
-            await run_manager.on_retriever_error(f"Error during retrieval: {str(e)}")
+            await run_manager.on_retriever_error(e)
             return []
 
     def _build_document(self, result: Dict[str, Any]) -> Document:
