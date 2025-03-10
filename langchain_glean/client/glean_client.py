@@ -4,7 +4,7 @@ from typing import Any, Dict, Literal, Optional, Union, cast
 import requests
 from requests.exceptions import HTTPError, RequestException
 
-from .glean_auth import GleanAuth
+from langchain_glean.client.glean_auth import GleanAuth
 
 DEFAULT_TIMEOUT = 60
 

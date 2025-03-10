@@ -65,7 +65,6 @@ The project uses [go-task](https://taskfile.dev/) to manage development tasks. H
 | `task spell:check` | Check spelling |
 | `task spell:fix` | Fix spelling |
 | `task check:imports` | Check imports |
-| `task verify:uv` | Verify that uv is working correctly |
 
 ## Pull Request Process
 
