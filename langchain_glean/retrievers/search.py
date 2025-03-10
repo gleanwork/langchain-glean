@@ -56,13 +56,15 @@ class GleanSearchRetriever(BaseRetriever):
 
     Setup:
         Install ``langchain-glean`` and set environment variables
-        ``GLEAN_API_TOKEN`` and ``GLEAN_SUBDOMAIN``.
+        ``GLEAN_API_TOKEN`` and ``GLEAN_SUBDOMAIN``. Optionally set ``GLEAN_ACT_AS``
+        if using a global token.
 
         .. code-block:: bash
 
             pip install -U langchain-glean
-            export GLEAN_API_TOKEN="your-api-token"
+            export GLEAN_API_TOKEN="your-api-token"  # Can be a global or user token
             export GLEAN_SUBDOMAIN="your-glean-subdomain"
+            export GLEAN_ACT_AS="user@example.com"  # Only required for global tokens
 
     Example:
         .. code-block:: python
@@ -122,7 +124,9 @@ class GleanSearchRetriever(BaseRetriever):
 
     subdomain: str = Field(description="Subdomain for Glean instance")
     api_token: str = Field(description="API token for Glean")
-    act_as: Optional[str] = Field(default=None, description="Email for the user to act as")
+    act_as: Optional[str] = Field(
+        default=None, description="Email for the user to act as. Required only when using a global token, not needed for user tokens."
+    )
 
     _auth: GleanAuth = PrivateAttr()
     _client: GleanClient = PrivateAttr()
@@ -144,7 +148,7 @@ class GleanSearchRetriever(BaseRetriever):
         values = values or {}
         values["subdomain"] = get_from_dict_or_env(values, "subdomain", "GLEAN_SUBDOMAIN")
         values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
-        values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", None)
+        values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
 
         return values
 
