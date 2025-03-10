@@ -6,7 +6,7 @@
 version: 3
 dotenv: [".env"]
 vars:
-  PYTHON: ".venv/bin/python"
+  PYTHON: "uv run python"
   PYTEST: "uv run pytest"
   RUFF: "uv run ruff"
   MYPY: "uv run mypy"
@@ -216,4 +216,4 @@ tasks:
   check:imports:
     desc: Check imports
     cmds:
-      - find langchain_glean -name '*.py' | grep -v "docs/" | xargs .venv/bin/python ./scripts/check_imports.py
+      - find langchain_glean -name '*.py' | grep -v "docs/" | xargs {{.PYTHON}} ./scripts/check_imports.py

@@ -75,6 +75,9 @@ jobs:
     - name: Run linters
       run: task lint
 
+    - name: Check imports
+      run: task check:imports
+
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
