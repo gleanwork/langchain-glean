@@ -20,6 +20,119 @@ export GLEAN_ACT_AS="user@example.com"  # Optional: Email to act as when making 
 
 ## Usage
 
+### Using the Chat Model
+
+The `ChatGlean` allows you to interact with Glean's AI chat functionality:
+
+```python
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_glean import ChatGlean
+
+# Initialize the chat model (will use environment variables)
+chat = ChatGlean()
+
+# Create messages
+messages = [
+    SystemMessage(content="You are a helpful AI assistant."),
+    HumanMessage(content="What are the company holidays this year?")
+]
+
+# Generate a response
+response = chat.invoke(messages)
+print(response.content)
+```
+
+#### Streaming Responses
+
+You can stream responses from the chat model:
+
+```python
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_glean import ChatGlean
+
+# Initialize the chat model
+chat = ChatGlean()
+
+# Create messages
+messages = [
+    SystemMessage(content="You are a helpful AI assistant."),
+    HumanMessage(content="Explain retrieval augmented generation.")
+]
+
+# Stream the response
+for chunk in chat.stream(messages):
+    # Process each chunk as it arrives
+    print(chunk.message.content, end="", flush=True)
+```
+
+#### Multi-turn Conversations
+
+You can have multi-turn conversations with chat history:
+
+```python
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_glean import ChatGlean
+
+# Initialize the chat model with chat saving enabled
+chat = ChatGlean(save_chat=True)
+
+# Start a conversation
+conversation = [
+    SystemMessage(content="You are a helpful AI assistant for our company.")
+]
+
+# First turn
+conversation.append(HumanMessage(content="What are our main projects?"))
+response = chat.invoke(conversation)
+print(f"AI: {response.content}")
+conversation.append(response)
+
+# Second turn
+conversation.append(HumanMessage(content="Which one has the highest priority?"))
+response = chat.invoke(conversation)
+print(f"AI: {response.content}")
+
+# The chat_id is saved in the chat model
+print(f"Chat ID: {chat.chat_id}")
+```
+
+#### Chat with RAG
+
+You can combine the chat model with a retriever for RAG:
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain_glean import ChatGlean, GleanSearchRetriever
+
+# Initialize components
+retriever = GleanSearchRetriever()
+chat = ChatGlean()
+
+# Create a prompt template
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "Answer based on the retrieved information: {context}"),
+    ("human", "{question}")
+])
+
+# Format documents function
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+# Create a RAG chain
+rag_chain = (
+    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    | prompt
+    | chat
+    | StrOutputParser()
+)
+
+# Run the chain
+response = rag_chain.invoke("What are our company policies?")
+print(response)
+```
+
 ### Using the Retriever
 
 The `GleanSearchRetriever` allows you to search and retrieve documents from Glean:
@@ -121,6 +234,23 @@ print(result)
 ```
 
 ## Advanced Usage
+
+### Chat Model Parameters
+
+You can customize the chat model behavior with additional parameters:
+
+```python
+from langchain_glean import ChatGlean
+
+# Initialize with custom parameters
+chat = ChatGlean(
+    save_chat=True,  # Save the chat session in Glean
+    chat_id="existing-chat-id",  # Continue an existing chat
+    agent="GPT",  # Specify the agent type (DEFAULT, GPT, etc.)
+    mode="SEARCH",  # Specify the mode (DEFAULT, SEARCH, etc.)
+    timeout=30  # Timeout in seconds for API requests
+)
+```
 
 ### Search Parameters
 

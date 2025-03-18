@@ -1,5 +1,6 @@
 from importlib import metadata
 
+from langchain_glean.chat_models import ChatGlean
 from langchain_glean.retrievers import GleanSearchParameters, GleanSearchRetriever
 from langchain_glean.tools import GleanSearchTool
 
@@ -11,6 +12,7 @@ except metadata.PackageNotFoundError:
 del metadata  # optional, avoids polluting the results of dir(__package__)
 
 __all__ = [
+    "ChatGlean",
     "GleanSearchParameters",
     "GleanSearchRetriever",
     "GleanSearchTool",

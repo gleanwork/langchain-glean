@@ -14,7 +14,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9,<4.0"
 dependencies = [
-    "langchain-core>=0.3.15",
+    "langchain-core>=0.3.45",
 ]
 
 [project.optional-dependencies]
@@ -44,7 +44,7 @@ typing = [
 
 [tool.mypy]
 disallow_untyped_defs = "True"
-exclude = ["docs/"]
+exclude = ["docs/", "tests/"]
 
 [tool.ruff]
 line-length = 160
