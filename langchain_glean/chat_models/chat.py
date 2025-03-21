@@ -276,8 +276,6 @@ class ChatGlean(BaseChatModel):
     ) -> ChatResult:
         """Generate a chat response from Glean.
 
-
-
         Args:
             messages: The messages to generate a response for.
             stop: A list of strings to stop generation when encountered.
