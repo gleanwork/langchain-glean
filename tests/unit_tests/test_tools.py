@@ -1,21 +1,20 @@
-import unittest
 from unittest.mock import MagicMock
 
+import pytest
 from langchain_core.documents import Document
 
 from langchain_glean.retrievers import GleanSearchRetriever
 from langchain_glean.tools import GleanSearchTool
 
 
-class TestGleanSearchTool(unittest.TestCase):
+class TestGleanSearchTool:
     """Test the GleanSearchTool class."""
 
-    def setUp(self) -> None:
+    @pytest.fixture(autouse=True)
+    def setup_method(self):
         """Set up the test."""
-        # Create a mock retriever
         self.mock_retriever = MagicMock(spec=GleanSearchRetriever)
 
-        # Create a sample document
         self.sample_doc = Document(
             page_content="This is a sample document.",
             metadata={
@@ -30,36 +29,33 @@ class TestGleanSearchTool(unittest.TestCase):
             },
         )
 
-        # Set up the mock retriever to return the sample document
         self.mock_retriever.invoke.return_value = [self.sample_doc]
         self.mock_retriever.ainvoke.return_value = [self.sample_doc]
 
-        # Create the tool
         self.tool = GleanSearchTool(retriever=self.mock_retriever)
+
+        yield
 
     def test_init(self) -> None:
         """Test the initialization of the tool."""
-        self.assertEqual(self.tool.name, "glean_search")
-        self.assertEqual(self.tool.retriever, self.mock_retriever)
-        self.assertFalse(self.tool.return_direct)
+        assert self.tool.name == "glean_search"
+        assert self.tool.retriever == self.mock_retriever
+        assert not self.tool.return_direct
 
     def test_run_with_string(self) -> None:
         """Test the _run method with a string query."""
-        # Call the method
         result = self.tool._run("test query")
 
-        # Check that the retriever was called correctly
         self.mock_retriever.invoke.assert_called_once_with("test query")
 
-        # Check the result
-        self.assertIn("Result 1:", result)
-        self.assertIn("Title: Sample Document", result)
-        self.assertIn("URL: https://example.com/doc", result)
-        self.assertIn("Content: This is a sample document.", result)
+        assert "Result 1:" in result
+        assert "Title: Sample Document" in result
+        assert "URL: https://example.com/doc" in result
+        assert "Content: This is a sample document." in result
 
     def test_run_with_dict(self) -> None:
         """Test the _run method with a dictionary query."""
-        # Call the method
+
         result = self.tool._run(
             {
                 "query": "test query",
@@ -69,7 +65,6 @@ class TestGleanSearchTool(unittest.TestCase):
             }
         )
 
-        # Check that the retriever was called correctly
         self.mock_retriever.invoke.assert_called_once_with(
             "test query",
             page_size=20,
@@ -77,48 +72,34 @@ class TestGleanSearchTool(unittest.TestCase):
             request_options={"facetFilters": [{"fieldName": "datasource", "values": [{"value": "slack", "relationType": "EQUALS"}]}]},
         )
 
-        # Check the result
-        self.assertIn("Result 1:", result)
-        self.assertIn("Title: Sample Document", result)
-        self.assertIn("URL: https://example.com/doc", result)
-        self.assertIn("Content: This is a sample document.", result)
+        assert "Result 1:" in result
+        assert "Title: Sample Document" in result
+        assert "URL: https://example.com/doc" in result
+        assert "Content: This is a sample document." in result
 
     def test_run_with_no_results(self) -> None:
         """Test the _run method when no results are found."""
-        # Set up the mock retriever to return no documents
         self.mock_retriever.invoke.return_value = []
 
-        # Call the method
         result = self.tool._run("test query")
 
-        # Check the result
-        self.assertEqual(result, "No results found.")
+        assert result == "No results found."
 
     def test_run_with_error(self) -> None:
         """Test the _run method when an error occurs."""
-        # Set up the mock retriever to raise an exception
         self.mock_retriever.invoke.side_effect = Exception("Test error")
 
-        # Call the method
         result = self.tool._run("test query")
 
-        # Check the result
-        self.assertEqual(result, "Error searching Glean: Test error")
+        assert result == "Error searching Glean: Test error"
 
     async def test_arun(self) -> None:
         """Test the _arun method."""
-        # Call the method
         result = await self.tool._arun("test query")
 
-        # Check that the retriever was called correctly
         self.mock_retriever.ainvoke.assert_called_once_with("test query")
 
-        # Check the result
-        self.assertIn("Result 1:", result)
-        self.assertIn("Title: Sample Document", result)
-        self.assertIn("URL: https://example.com/doc", result)
-        self.assertIn("Content: This is a sample document.", result)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert "Result 1:" in result
+        assert "Title: Sample Document" in result
+        assert "URL: https://example.com/doc" in result
+        assert "Content: This is a sample document." in result

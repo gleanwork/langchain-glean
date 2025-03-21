@@ -12,9 +12,9 @@ vars:
   MYPY: "uv run mypy"
   CODESPELL: "uv run codespell"
   PTW: "uv run ptw"
-  TEST_DIR: "tests/unit_tests/"
+  TEST_DIR: "tests/"
   PYTHON_FILES: "."
-  EXCLUDE_DIRS: "--exclude docs/"
+  EXCLUDE_DIRS: "--exclude docs/ --exclude tests/"
   MYPY_CACHE: ".mypy_cache"
 
 tasks:
@@ -63,8 +63,17 @@ tasks:
     cmds:
       - "{{.PTW}} --snapshot-update --now . -- -vv --tb=auto -rA --durations=10 -p no:logging {{.TEST_DIR}}"
 
+  # Unit tests task: Run unit tests
+  test:unit:
+    aliases: [unit_test, unit_tests]
+    desc: Run unit tests
+    vars:
+      TEST_DIR: "tests/unit_tests/"
+    cmds:
+      - "{{.PYTEST}} -v --tb=auto -rA --durations=10 -p no:logging {{.TEST_DIR}}"
+  
   # Integration tests task: Run integration tests
-  integration:tests:
+  test:integration:
     aliases: [integration_test, integration_tests]
     desc: Run integration tests
     vars:
@@ -163,7 +172,7 @@ tasks:
   lint:format:check:
     internal: true
     cmds:
-      - '[ "{{.PYTHON_FILES}}" = "" ] || {{.RUFF}} format {{.PYTHON_FILES}} --diff {{.EXCLUDE_DIRS}}'
+      - '[ "{{.PYTHON_FILES}}" = "" ] || {{.RUFF}} format {{.PYTHON_FILES}} --diff'
 
   # Lint Mypy task: Run mypy type checker
   lint:mypy:
@@ -192,13 +201,13 @@ tasks:
   format:ruff:
     internal: true
     cmds:
-      - '[ "{{.PYTHON_FILES}}" = "" ] || {{.RUFF}} format {{.PYTHON_FILES}} {{.EXCLUDE_DIRS}}'
+      - '[ "{{.PYTHON_FILES}}" = "" ] || {{.RUFF}} format {{.PYTHON_FILES}}'
 
   # Format Imports task: Fix imports
   format:imports:
     internal: true
     cmds:
-      - '[ "{{.PYTHON_FILES}}" = "" ] || {{.RUFF}} check --select I --fix {{.PYTHON_FILES}} {{.EXCLUDE_DIRS}}'
+      - '[ "{{.PYTHON_FILES}}" = "" ] || {{.RUFF}} check --select I --fix {{.PYTHON_FILES}}'
 
   # Spell check task: Check spelling
   spell:check:

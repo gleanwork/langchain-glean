@@ -127,6 +127,7 @@ class GleanSearchRetriever(BaseRetriever):
     act_as: Optional[str] = Field(
         default=None, description="Email for the user to act as. Required only when using a global token, not needed for user tokens."
     )
+    k: Optional[int] = Field(default=None, description="Number of results to return. Maps to page_size in the Glean API.")
 
     _auth: GleanAuth = PrivateAttr()
     _client: GleanClient = PrivateAttr()
@@ -177,7 +178,15 @@ class GleanSearchRetriever(BaseRetriever):
         """
         search_params: Dict[str, Any] = {"query": query}
 
-        if "page_size" not in kwargs:
+        # The k parameter is a langchain parameter that maps to the number of documents to return
+        if "k" in kwargs:
+            # Use k as the minimum page size, but might request more to ensure we get enough results
+            search_params["page_size"] = max(kwargs.get("k"), kwargs.get("page_size", DEFAULT_PAGE_SIZE))
+        elif self.k is not None:
+            # Use self.k as the minimum page size
+            search_params["page_size"] = max(self.k, kwargs.get("page_size", DEFAULT_PAGE_SIZE))
+        elif "page_size" not in kwargs:
+            # Default page size if nothing is specified
             search_params["page_size"] = DEFAULT_PAGE_SIZE
 
         for key, value in kwargs.items():
@@ -212,7 +221,9 @@ class GleanSearchRetriever(BaseRetriever):
             payload = self._build_search_params(query, **kwargs)
 
             try:
-                search_results = self._client.post("search", data=json.dumps(payload), headers={"Content-Type": "application/json"})
+                response = self._client.post("search", data=json.dumps(payload), headers={"Content-Type": "application/json"})
+                search_results = self._client.parse_response(response)
+
             except GleanHTTPError as http_err:
                 error_details = f"HTTP Error {http_err.status_code}"
                 if http_err.response:
@@ -234,6 +245,11 @@ class GleanSearchRetriever(BaseRetriever):
                 except Exception as doc_error:
                     run_manager.on_retriever_error(doc_error)
                     continue
+
+            # Limit the number of documents based on the k parameter
+            k_limit = kwargs.get("k") if "k" in kwargs else self.k
+            if k_limit is not None and isinstance(k_limit, int):
+                documents = documents[:k_limit]
 
             return documents
 
@@ -259,9 +275,10 @@ class GleanSearchRetriever(BaseRetriever):
 
             loop = asyncio.get_event_loop()
             try:
-                search_results = await loop.run_in_executor(
+                response = await loop.run_in_executor(
                     None, lambda: self._client.post("search", data=json.dumps(payload), headers={"Content-Type": "application/json"})
                 )
+                search_results = self._client.parse_response(response)
             except GleanHTTPError as http_err:
                 error_details = f"HTTP Error {http_err.status_code}"
                 if http_err.response:
