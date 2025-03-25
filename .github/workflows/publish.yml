@@ -1,27 +1,48 @@
 name: Publish to PyPI
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*.*.*'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: write    # Needed for creating GitHub releases
+
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0   # Needed for changelog generation
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.10"
+        python-version: "3.x"
         
     - name: Set up uv
       uses: astral-sh/setup-uv@v5
         
     - name: Build package
       run: uv pip build
+
+    - name: Get Changelog Entry
+      id: changelog
+      run: |
+        uv pip install commitizen
+        LATEST_TAG=$(git describe --tags --abbrev=0)
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^)
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        cz changelog --start-rev $PREVIOUS_TAG --end-rev $LATEST_TAG >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
       
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body: ${{ steps.changelog.output.CHANGELOG }}
+        
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }} 
