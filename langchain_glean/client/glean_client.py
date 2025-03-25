@@ -98,7 +98,7 @@ class GleanClient:
             return {"text": body}
         return body
 
-    def post(self, endpoint: str, **kwargs: Any) -> Dict[str, Any]:
+    def post(self, endpoint: str, **kwargs: Any) -> requests.Response:
         """
         Send a POST request to the Glean API.
 
@@ -116,14 +116,14 @@ class GleanClient:
         url = f"{self.base_url}/{endpoint}"
         try:
             response = self.session.post(url, **kwargs)
-            return self.parse_response(response)
+            return response
         except RequestException as e:
             if isinstance(e, HTTPError):
                 # This is already handled in parse_response
                 raise
             raise GleanConnectionError(f"Connection error when calling {endpoint}: {str(e)}") from e
 
-    def get(self, endpoint: str, **kwargs: Any) -> Dict[str, Any]:
+    def get(self, endpoint: str, **kwargs: Any) -> requests.Response:
         """
         Send a GET request to the Glean API.
 
@@ -141,7 +141,7 @@ class GleanClient:
         url = f"{self.base_url}/{endpoint}"
         try:
             response = self.session.get(url, **kwargs)
-            return self.parse_response(response)
+            return response
         except RequestException as e:
             if isinstance(e, HTTPError):
                 # This is already handled in parse_response

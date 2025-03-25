@@ -1,17 +1,18 @@
 import json
 import os
-import unittest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from langchain_core.documents import Document
 
 from langchain_glean.retrievers import GleanSearchRetriever
 
 
-class TestGleanSearchRetriever(unittest.TestCase):
+class TestGleanSearchRetriever:
     """Test the GleanSearchRetriever class."""
 
-    def setUp(self) -> None:
+    @pytest.fixture(autouse=True)
+    def setup_method(self):
         """Set up the test."""
         # Set environment variables for testing
         os.environ["GLEAN_SUBDOMAIN"] = "test-glean"
@@ -55,7 +56,9 @@ class TestGleanSearchRetriever(unittest.TestCase):
             ]
         }
 
-        self.mock_client.post.return_value = self.sample_result
+        mock_response = MagicMock()
+        self.mock_client.post.return_value = mock_response
+        self.mock_client.parse_response.return_value = self.sample_result
 
         self.auth_patcher = patch("langchain_glean.retrievers.search.GleanAuth")
         self.mock_auth_class = self.auth_patcher.start()
@@ -67,19 +70,21 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
         self.retriever = GleanSearchRetriever()
 
-    def tearDown(self) -> None:
-        """Tear down the test."""
+        yield
+
+        # Clean up after tests
         self.auth_patcher.stop()
         self.client_patcher.stop()
-        # Clean up environment variables
+
+        # Clean up environment variables after tests
         for var in ["GLEAN_SUBDOMAIN", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
-            os.environ.pop(var, None)  # Use pop with None as default to avoid KeyError
+            os.environ.pop(var, None)
 
     def test_init(self) -> None:
         """Test the initialization of the retriever."""
-        self.assertEqual(self.retriever.subdomain, "test-glean")
-        self.assertEqual(self.retriever.api_token, "test-token")
-        self.assertEqual(self.retriever.act_as, "test@example.com")
+        assert self.retriever.subdomain == "test-glean"
+        assert self.retriever.api_token == "test-token"
+        assert self.retriever.act_as == "test@example.com"
 
         self.mock_auth_class.assert_called_once_with(api_token="test-token", subdomain="test-glean", act_as="test@example.com")
         self.mock_client_class.assert_called_once_with(auth=self.mock_auth)
@@ -89,7 +94,7 @@ class TestGleanSearchRetriever(unittest.TestCase):
         del os.environ["GLEAN_SUBDOMAIN"]
         del os.environ["GLEAN_API_TOKEN"]
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             GleanSearchRetriever()
 
     def test_invoke(self) -> None:
@@ -98,27 +103,27 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
         self.mock_client.post.assert_called_once()
         call_args = self.mock_client.post.call_args
-        self.assertEqual(call_args[0][0], "search")
+        assert call_args[0][0] == "search"
 
         payload = json.loads(call_args[1]["data"])
-        self.assertEqual(payload["query"], "test query")
-        self.assertEqual(payload["pageSize"], 100)
+        assert payload["query"] == "test query"
+        assert payload["pageSize"] == 100
 
-        self.assertEqual(call_args[1]["headers"], {"Content-Type": "application/json"})
+        assert call_args[1]["headers"] == {"Content-Type": "application/json"}
 
-        self.assertEqual(len(docs), 1)
+        assert len(docs) == 1
         doc = docs[0]
-        self.assertIsInstance(doc, Document)
-        self.assertEqual(doc.page_content, "This is a sample snippet.\nThis is another sample snippet.")
+        assert isinstance(doc, Document)
+        assert doc.page_content == "This is a sample snippet.\nThis is another sample snippet."
 
-        self.assertEqual(doc.metadata["title"], "Sample Document")
-        self.assertEqual(doc.metadata["url"], "https://example.com/doc")
-        self.assertEqual(doc.metadata["document_id"], "doc-123")
-        self.assertEqual(doc.metadata["datasource"], "slack")
-        self.assertEqual(doc.metadata["doc_type"], "Message")
-        self.assertEqual(doc.metadata["author"], "John Doe")
-        self.assertEqual(doc.metadata["create_time"], "2023-01-01T00:00:00Z")
-        self.assertEqual(doc.metadata["update_time"], "2023-01-02T00:00:00Z")
+        assert doc.metadata["title"] == "Sample Document"
+        assert doc.metadata["url"] == "https://example.com/doc"
+        assert doc.metadata["document_id"] == "doc-123"
+        assert doc.metadata["datasource"] == "slack"
+        assert doc.metadata["doc_type"] == "Message"
+        assert doc.metadata["author"] == "John Doe"
+        assert doc.metadata["create_time"] == "2023-01-01T00:00:00Z"
+        assert doc.metadata["update_time"] == "2023-01-02T00:00:00Z"
 
     def test_invoke_with_params(self) -> None:
         """Test the invoke method with additional parameters."""
@@ -135,19 +140,19 @@ class TestGleanSearchRetriever(unittest.TestCase):
         )
 
         payload = json.loads(self.mock_client.post.call_args[1]["data"])
-        self.assertEqual(payload["query"], "test query")
-        self.assertEqual(payload["pageSize"], 20)
-        self.assertEqual(payload["disableSpellcheck"], True)
-        self.assertEqual(payload["maxSnippetSize"], 100)
+        assert payload["query"] == "test query"
+        assert payload["pageSize"] == 20
+        assert payload["disableSpellcheck"] is True
+        assert payload["maxSnippetSize"] == 100
 
         facet_filters = payload["requestOptions"]["facetFilters"]
-        self.assertEqual(len(facet_filters), 1)
-        self.assertEqual(facet_filters[0]["fieldName"], "datasource")
-        self.assertEqual(len(facet_filters[0]["values"]), 2)
-        self.assertEqual(facet_filters[0]["values"][0]["value"], "slack")
-        self.assertEqual(facet_filters[0]["values"][0]["relationType"], "EQUALS")
-        self.assertEqual(facet_filters[0]["values"][1]["value"], "gdrive")
-        self.assertEqual(facet_filters[0]["values"][1]["relationType"], "EQUALS")
+        assert len(facet_filters) == 1
+        assert facet_filters[0]["fieldName"] == "datasource"
+        assert len(facet_filters[0]["values"]) == 2
+        assert facet_filters[0]["values"][0]["value"] == "slack"
+        assert facet_filters[0]["values"][0]["relationType"] == "EQUALS"
+        assert facet_filters[0]["values"][1]["value"] == "gdrive"
+        assert facet_filters[0]["values"][1]["relationType"] == "EQUALS"
 
     def test_build_document(self) -> None:
         """Test the _build_document method."""
@@ -155,18 +160,14 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
         doc = self.retriever._build_document(result)
 
-        self.assertIsInstance(doc, Document)
-        self.assertEqual(doc.page_content, "This is a sample snippet.\nThis is another sample snippet.")
+        assert isinstance(doc, Document)
+        assert doc.page_content == "This is a sample snippet.\nThis is another sample snippet."
 
-        self.assertEqual(doc.metadata["title"], "Sample Document")
-        self.assertEqual(doc.metadata["url"], "https://example.com/doc")
-        self.assertEqual(doc.metadata["document_id"], "doc-123")
-        self.assertEqual(doc.metadata["datasource"], "slack")
-        self.assertEqual(doc.metadata["doc_type"], "Message")
-        self.assertEqual(doc.metadata["author"], "John Doe")
-        self.assertEqual(doc.metadata["create_time"], "2023-01-01T00:00:00Z")
-        self.assertEqual(doc.metadata["update_time"], "2023-01-02T00:00:00Z")
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert doc.metadata["title"] == "Sample Document"
+        assert doc.metadata["url"] == "https://example.com/doc"
+        assert doc.metadata["document_id"] == "doc-123"
+        assert doc.metadata["datasource"] == "slack"
+        assert doc.metadata["doc_type"] == "Message"
+        assert doc.metadata["author"] == "John Doe"
+        assert doc.metadata["create_time"] == "2023-01-01T00:00:00Z"
+        assert doc.metadata["update_time"] == "2023-01-02T00:00:00Z"
