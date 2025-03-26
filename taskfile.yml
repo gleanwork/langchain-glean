@@ -226,3 +226,19 @@ tasks:
     desc: Check imports
     cmds:
       - find langchain_glean -name '*.py' | grep -v "docs/" | xargs {{.PYTHON}} ./scripts/check_imports.py
+
+  # Release task: Bump version and create a new tag (use DRY_RUN=true for preview)
+  release:
+    desc: Bump version and create a new tag (use DRY_RUN=true for preview)
+    vars:
+      DRY_RUN: '{{default "false" .DRY_RUN}}'
+      CZ: "uv run python -m commitizen"
+    cmds:
+      - |
+        if [ "{{.DRY_RUN}}" = "true" ]; then
+          {{.CZ}} bump --dry-run
+          {{.CZ}} changelog --dry-run
+        else
+          {{.CZ}} bump --yes
+          {{.CZ}} changelog
+        fi
