@@ -1,3 +1,9 @@
+## v0.2.1 (2025-03-31)
+
+### Fix
+
+- ensure version files are properly synchronized
+
 ## v0.2.0 (2025-03-25)
 
 ### Feat
