@@ -48,8 +48,7 @@ class TestGleanSearchTool:
 
         self.mock_retriever.invoke.assert_called_once_with("test query")
 
-        assert "Result 1:" in result
-        assert "Title: Sample Document" in result
+        assert "Result 1: Sample Document (slack)" in result
         assert "URL: https://example.com/doc" in result
         assert "Content: This is a sample document." in result
 
@@ -61,7 +60,7 @@ class TestGleanSearchTool:
                 "query": "test query",
                 "page_size": 20,
                 "disable_spellcheck": True,
-                "request_options": {"facetFilters": [{"fieldName": "datasource", "values": [{"value": "slack", "relationType": "EQUALS"}]}]},
+                "request_options": {"facet_filters": [{"field_name": "datasource", "values": [{"value": "slack", "relation_type": "EQUALS"}]}]},
             }
         )
 
@@ -69,11 +68,10 @@ class TestGleanSearchTool:
             "test query",
             page_size=20,
             disable_spellcheck=True,
-            request_options={"facetFilters": [{"fieldName": "datasource", "values": [{"value": "slack", "relationType": "EQUALS"}]}]},
+            request_options={"facet_filters": [{"field_name": "datasource", "values": [{"value": "slack", "relation_type": "EQUALS"}]}]},
         )
 
-        assert "Result 1:" in result
-        assert "Title: Sample Document" in result
+        assert "Result 1: Sample Document (slack)" in result
         assert "URL: https://example.com/doc" in result
         assert "Content: This is a sample document." in result
 
@@ -91,7 +89,7 @@ class TestGleanSearchTool:
 
         result = self.tool._run("test query")
 
-        assert result == "Error searching Glean: Test error"
+        assert "Error running Glean search: Test error" in result
 
     async def test_arun(self) -> None:
         """Test the _arun method."""
@@ -99,7 +97,6 @@ class TestGleanSearchTool:
 
         self.mock_retriever.ainvoke.assert_called_once_with("test query")
 
-        assert "Result 1:" in result
-        assert "Title: Sample Document" in result
+        assert "Result 1: Sample Document (slack)" in result
         assert "URL: https://example.com/doc" in result
         assert "Content: This is a sample document." in result
