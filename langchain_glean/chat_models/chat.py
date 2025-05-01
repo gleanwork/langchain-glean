@@ -438,7 +438,7 @@ class ChatGlean(BaseChatModel):
             raise ValueError("stop sequences are not supported by the Glean Chat Model")
 
         params = self._build_chat_params(messages)
-        params["stream"] = True
+        params.stream = True
 
         try:
             async for chunk in self._client.chat.start_streaming_async(params):
