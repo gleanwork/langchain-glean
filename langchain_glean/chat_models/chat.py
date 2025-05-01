@@ -1,6 +1,6 @@
-import json
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 
+from glean import Glean, errors, models
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
@@ -13,10 +13,7 @@ from langchain_core.messages import (
 )
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.utils import get_from_dict_or_env
-from pydantic import Field, PrivateAttr, model_validator
-
-from langchain_glean.client import GleanAuth, GleanClient
-from langchain_glean.client.glean_client import GleanClientError, GleanConnectionError, GleanHTTPError
+from pydantic import Field, model_validator
 
 
 class ChatGlean(BaseChatModel):
@@ -138,9 +135,6 @@ class ChatGlean(BaseChatModel):
         default=None, description="The ID of the application this request originates from, used to determine the configuration of underlying chat processes."
     )
 
-    _auth: GleanAuth = PrivateAttr()
-    _client: GleanClient = PrivateAttr()
-
     @model_validator(mode="before")
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that api key and subdomain exists in environment.
@@ -170,8 +164,8 @@ class ChatGlean(BaseChatModel):
         super().__init__(**kwargs)
 
         try:
-            self._auth = GleanAuth(api_token=self.api_token, subdomain=self.subdomain, act_as=self.act_as)
-            self._client = GleanClient(auth=self._auth, timeout=self.timeout)
+            g = Glean(bearer_auth=self.api_token, domain=self.subdomain)
+            self._client = g.client
         except Exception as e:
             raise ValueError(f"Failed to initialize Glean client: {str(e)}")
 
@@ -234,7 +228,7 @@ class ChatGlean(BaseChatModel):
         else:
             return HumanMessage(content=content)
 
-    def _build_chat_params(self, messages: List[BaseMessage]) -> Dict[str, Any]:
+    def _build_chat_params(self, messages: List[BaseMessage]) -> models.ChatRequest:
         """Create a chat request for the Glean API.
 
         Args:
@@ -245,25 +239,25 @@ class ChatGlean(BaseChatModel):
         """
         glean_messages = [self._convert_message_to_glean_format(msg) for msg in messages]
 
-        # Build the base request with required parameters
-        request = {"messages": glean_messages, "saveChat": self.save_chat, "agentConfig": self.agent_config}
+        # Build ChatRequest with required parameters
+        request = models.ChatRequest(messages=glean_messages, save_chat=self.save_chat, agent_config=self.agent_config)
 
         # Add optional parameters if they are set
         if self.chat_id:
-            request["chatId"] = self.chat_id
+            request.chat_id = self.chat_id
 
         # Add additional parameters from the OpenAPI specification
         if self.inclusions:
-            request["inclusions"] = self.inclusions
+            request.inclusions = self.inclusions
 
         if self.exclusions:
-            request["exclusions"] = self.exclusions
+            request.exclusions = self.exclusions
 
         if self.timeout_millis:
-            request["timeoutMillis"] = self.timeout_millis
+            request.timeout_millis = self.timeout_millis
 
         if self.application_id:
-            request["applicationId"] = self.application_id
+            request.application_id = self.application_id
 
         return request
 
@@ -294,34 +288,72 @@ class ChatGlean(BaseChatModel):
         params = self._build_chat_params(messages)
 
         try:
-            response = self._client.post("chat", data=json.dumps(params), headers={"Content-Type": "application/json"}, timeout=self.timeout)
-            chat_response = self._client.parse_response(response)
-        except GleanHTTPError as http_err:
-            error_details = f"HTTP Error {http_err.status_code}"
-            if http_err.response:
-                error_details += f": {http_err.response}"
-            raise ValueError(f"Glean API error: {error_details}")
-        except GleanConnectionError as conn_err:
-            raise ValueError(f"Glean connection error: {str(conn_err)}")
-        except GleanClientError as client_err:
+            response = self._client.chat.start(params)
+
+        except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
 
-        response_messages = chat_response.get("messages", [])
-        ai_messages = [msg for msg in response_messages if msg.get("author") == "GLEAN_AI" and msg.get("messageType") == "CONTENT"]
+        ai_messages = [msg for msg in response.messages if msg.get("author") == "GLEAN_AI" and msg.get("messageType") == "CONTENT"]
 
         if not ai_messages:
             raise ValueError("No AI response found in the Glean response")
 
         ai_message = ai_messages[-1]
 
-        if "chatId" in chat_response:
-            self.chat_id = chat_response["chatId"]
+        if hasattr(response, "chatId") and response.chatId:
+            self.chat_id = response.chatId
 
         langchain_message = self._convert_glean_message_to_langchain(ai_message)
 
-        generation = ChatGeneration(
-            message=langchain_message, generation_info={"chat_id": self.chat_id, "tracking_token": chat_response.get("chatSessionTrackingToken", "")}
-        )
+        generation = ChatGeneration(message=langchain_message, generation_info={"chat_id": self.chat_id, "tracking_token": response.chatSessionTrackingToken})
+
+        return ChatResult(generations=[generation])
+
+    async def _agenerate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        """Generate a chat response from Glean asynchronously.
+
+        Args:
+            messages: The messages to generate a response for.
+            stop: A list of strings to stop generation when encountered.
+            run_manager: A callback manager for the run.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            A ChatResult containing the generated response.
+
+        Raises:
+            ValueError: If the response from Glean is invalid.
+        """
+        if stop is not None:
+            raise ValueError("stop sequences are not supported by the Glean Chat Model")
+
+        params = self._build_chat_params(messages)
+
+        try:
+            response = await self._client.chat.start_async(params)
+
+        except errors.GleanError as client_err:
+            raise ValueError(f"Glean client error: {str(client_err)}")
+
+        ai_messages = [msg for msg in response.messages if msg.get("author") == "GLEAN_AI" and msg.get("messageType") == "CONTENT"]
+
+        if not ai_messages:
+            raise ValueError("No AI response found in the Glean response")
+
+        ai_message = ai_messages[-1]
+
+        if hasattr(response, "chatId") and response.chatId:
+            self.chat_id = response.chatId
+
+        langchain_message = self._convert_glean_message_to_langchain(ai_message)
+
+        generation = ChatGeneration(message=langchain_message, generation_info={"chat_id": self.chat_id, "tracking_token": response.chatSessionTrackingToken})
 
         return ChatResult(generations=[generation])
 
@@ -350,66 +382,89 @@ class ChatGlean(BaseChatModel):
             raise ValueError("stop sequences are not supported by the Glean Chat Model")
 
         params = self._build_chat_params(messages)
-
-        params["stream"] = True
+        params.stream = True
 
         try:
-            response = self._client.post("chat", data=json.dumps(params), headers={"Content-Type": "application/json"}, stream=True, timeout=self.timeout)
-
-            content_buffer = ""
-            chat_id = None
-            tracking_token = None
-
-            for line in response.iter_lines():
-                if not line:
-                    continue
-
-                line_text = line.decode("utf-8")
-                if line_text.startswith("data: "):
-                    line_text = line_text[6:]
-
-                try:
-                    chunk_data = json.loads(line_text)
-
-                    if "chatId" in chunk_data and not chat_id:
-                        chat_id = chunk_data["chatId"]
-                        self.chat_id = chat_id
-
-                    if "chatSessionTrackingToken" in chunk_data and not tracking_token:
-                        tracking_token = chunk_data["chatSessionTrackingToken"]
-
-                    for message in chunk_data.get("messages", []):
+            for chunk in self._client.chat.start_streaming(params):
+                if chunk.messages:
+                    for message in chunk.messages:
                         if message.get("author") == "GLEAN_AI" and message.get("messageType") == "CONTENT":
                             for fragment in message.get("fragments", []):
                                 if "text" in fragment:
                                     new_content = fragment.get("text", "")
                                     if new_content:
-                                        content_buffer += new_content
-
                                         message_chunk = AIMessageChunk(content=new_content)
 
-                                        chunk = ChatGenerationChunk(
+                                        chat_id = getattr(chunk, "chatId", None)
+                                        if chat_id and not self.chat_id:
+                                            self.chat_id = chat_id
+
+                                        tracking_token = getattr(chunk, "chatSessionTrackingToken", None)
+
+                                        gen_chunk = ChatGenerationChunk(
                                             message=message_chunk, generation_info={"chat_id": chat_id, "tracking_token": tracking_token}
                                         )
-                                        yield chunk
+                                        yield gen_chunk
 
                                         if run_manager:
                                             run_manager.on_llm_new_token(new_content)
-                except json.JSONDecodeError:
-                    continue
-                except Exception as e:
-                    if run_manager:
-                        run_manager.on_llm_error(e)
-                    continue
+        except errors.GleanError as client_err:
+            raise ValueError(f"Glean client error: {str(client_err)}")
+        except Exception as e:
+            raise ValueError(f"Error during streaming: {str(e)}")
 
-        except GleanHTTPError as http_err:
-            error_details = f"HTTP Error {http_err.status_code}"
-            if http_err.response:
-                error_details += f": {http_err.response}"
-            raise ValueError(f"Glean API error: {error_details}")
-        except GleanConnectionError as conn_err:
-            raise ValueError(f"Glean connection error: {str(conn_err)}")
-        except GleanClientError as client_err:
+    async def _astream(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ChatGenerationChunk]:
+        """Stream a chat response from Glean asynchronously.
+
+        Args:
+            messages: The messages to generate a response for.
+            stop: A list of strings to stop generation when encountered.
+            run_manager: A callback manager for the run.
+            **kwargs: Additional keyword arguments.
+
+        Yields:
+            ChatGenerationChunk: Chunks of the generated chat response.
+
+        Raises:
+            ValueError: If there's an error with the Glean API call or response processing.
+        """
+        if stop is not None:
+            raise ValueError("stop sequences are not supported by the Glean Chat Model")
+
+        params = self._build_chat_params(messages)
+        params.stream = True
+
+        try:
+            async for chunk in self._client.chat.start_streaming_async(params):
+                if chunk.messages:
+                    for message in chunk.messages:
+                        if message.get("author") == "GLEAN_AI" and message.get("messageType") == "CONTENT":
+                            for fragment in message.get("fragments", []):
+                                if "text" in fragment:
+                                    new_content = fragment.get("text", "")
+                                    if new_content:
+                                        message_chunk = AIMessageChunk(content=new_content)
+
+                                        chat_id = getattr(chunk, "chatId", None)
+                                        if chat_id and not self.chat_id:
+                                            self.chat_id = chat_id
+
+                                        tracking_token = getattr(chunk, "chatSessionTrackingToken", None)
+
+                                        gen_chunk = ChatGenerationChunk(
+                                            message=message_chunk, generation_info={"chat_id": chat_id, "tracking_token": tracking_token}
+                                        )
+                                        yield gen_chunk
+
+                                        if run_manager:
+                                            await run_manager.on_llm_new_token(new_content)
+        except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception as e:
             raise ValueError(f"Error during streaming: {str(e)}")

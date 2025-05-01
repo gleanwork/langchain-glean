@@ -19,62 +19,63 @@ class TestGleanSearchRetriever:
         os.environ["GLEAN_API_TOKEN"] = "test-token"
         os.environ["GLEAN_ACT_AS"] = "test@example.com"
 
-        self.mock_client = MagicMock()
-        self.mock_auth = MagicMock()
+        # Mock the Glean class
+        self.mock_glean_patcher = patch("langchain_glean.retrievers.search.Glean")
+        self.mock_glean = self.mock_glean_patcher.start()
 
-        self.sample_result = {
-            "results": [
-                {
-                    "trackingToken": "sample-token",
-                    "document": {
-                        "id": "doc-123",
-                        "datasource": "slack",
-                        "docType": "Message",
-                        "title": "Sample Document",
-                        "url": "https://example.com/doc",
-                        "metadata": {
-                            "datasource": "slack",
-                            "datasourceInstance": "workspace",
-                            "objectType": "Message",
-                            "mimeType": "text/plain",
-                            "documentId": "doc-123",
-                            "loggingId": "log-123",
-                            "createTime": "2023-01-01T00:00:00Z",
-                            "updateTime": "2023-01-02T00:00:00Z",
-                            "visibility": "PUBLIC_VISIBLE",
-                            "documentCategory": "PUBLISHED_CONTENT",
-                            "author": {"name": "John Doe", "email": "john@example.com"},
-                        },
-                    },
+        # Mock the client property of the Glean instance
+        mock_client = MagicMock()
+        self.mock_glean.return_value.client = mock_client
+
+        # Create mock search client
+        mock_search = MagicMock()
+        mock_client.search = mock_search
+
+        # Sample search response with a document
+        search_result = MagicMock()
+        search_result.results = [
+            {
+                "trackingToken": "sample-token",
+                "document": {
+                    "id": "doc-123",
+                    "datasource": "slack",
+                    "docType": "Message",
                     "title": "Sample Document",
                     "url": "https://example.com/doc",
-                    "snippets": [
-                        {"text": "This is a sample snippet.", "ranges": [{"startIndex": 0, "endIndex": 4, "type": "BOLD"}]},
-                        {"text": "This is another sample snippet.", "ranges": []},
-                    ],
-                }
-            ]
-        }
+                    "metadata": {
+                        "datasource": "slack",
+                        "datasourceInstance": "workspace",
+                        "objectType": "Message",
+                        "mimeType": "text/plain",
+                        "documentId": "doc-123",
+                        "loggingId": "log-123",
+                        "createTime": "2023-01-01T00:00:00Z",
+                        "updateTime": "2023-01-02T00:00:00Z",
+                        "visibility": "PUBLIC_VISIBLE",
+                        "documentCategory": "PUBLISHED_CONTENT",
+                        "author": {"name": "John Doe", "email": "john@example.com"},
+                    },
+                },
+                "title": "Sample Document",
+                "url": "https://example.com/doc",
+                "snippets": [
+                    {"text": "This is a sample snippet.", "ranges": [{"startIndex": 0, "endIndex": 4, "type": "BOLD"}]},
+                    {"text": "This is another sample snippet.", "ranges": []},
+                ],
+            }
+        ]
 
-        mock_response = MagicMock()
-        self.mock_client.post.return_value = mock_response
-        self.mock_client.parse_response.return_value = self.sample_result
-
-        self.auth_patcher = patch("langchain_glean.retrievers.search.GleanAuth")
-        self.mock_auth_class = self.auth_patcher.start()
-        self.mock_auth_class.return_value = self.mock_auth
-
-        self.client_patcher = patch("langchain_glean.retrievers.search.GleanClient")
-        self.mock_client_class = self.client_patcher.start()
-        self.mock_client_class.return_value = self.mock_client
+        # Mock the execute and execute_async methods
+        mock_search.execute.return_value = search_result
+        mock_search.execute_async.return_value = search_result
 
         self.retriever = GleanSearchRetriever()
+        self.retriever._client = mock_client
 
         yield
 
         # Clean up after tests
-        self.auth_patcher.stop()
-        self.client_patcher.stop()
+        self.mock_glean_patcher.stop()
 
         # Clean up environment variables after tests
         for var in ["GLEAN_SUBDOMAIN", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
@@ -86,8 +87,10 @@ class TestGleanSearchRetriever:
         assert self.retriever.api_token == "test-token"
         assert self.retriever.act_as == "test@example.com"
 
-        self.mock_auth_class.assert_called_once_with(api_token="test-token", subdomain="test-glean", act_as="test@example.com")
-        self.mock_client_class.assert_called_once_with(auth=self.mock_auth)
+        self.mock_glean.assert_called_once_with(
+            bearer_auth="test-token",
+            domain="test-glean",
+        )
 
     def test_init_with_missing_env_vars(self) -> None:
         """Test initialization with missing environment variables."""
@@ -101,15 +104,12 @@ class TestGleanSearchRetriever:
         """Test the invoke method."""
         docs = self.retriever.invoke("test query")
 
-        self.mock_client.post.assert_called_once()
-        call_args = self.mock_client.post.call_args
-        assert call_args[0][0] == "search"
-
-        payload = json.loads(call_args[1]["data"])
-        assert payload["query"] == "test query"
-        assert payload["pageSize"] == 100
-
-        assert call_args[1]["headers"] == {"Content-Type": "application/json"}
+        # Verify the search.execute method was called with the correct parameters
+        self.retriever._client.search.execute.assert_called_once()
+        call_args = self.retriever._client.search.execute.call_args
+        search_request = call_args[1]["search_request"]
+        assert "query" in search_request
+        assert search_request["query"] == "test query"
 
         assert len(docs) == 1
         doc = docs[0]
@@ -139,13 +139,14 @@ class TestGleanSearchRetriever:
             },
         )
 
-        payload = json.loads(self.mock_client.post.call_args[1]["data"])
-        assert payload["query"] == "test query"
-        assert payload["pageSize"] == 20
-        assert payload["disableSpellcheck"] is True
-        assert payload["maxSnippetSize"] == 100
+        call_args = self.retriever._client.search.execute.call_args
+        search_request = call_args[1]["search_request"]
+        assert search_request["query"] == "test query"
+        assert search_request["page_size"] == 20
+        assert search_request["disable_spellcheck"] is True
+        assert search_request["max_snippet_size"] == 100
 
-        facet_filters = payload["requestOptions"]["facetFilters"]
+        facet_filters = search_request["request_options"]["facetFilters"]
         assert len(facet_filters) == 1
         assert facet_filters[0]["fieldName"] == "datasource"
         assert len(facet_filters[0]["values"]) == 2
@@ -156,7 +157,7 @@ class TestGleanSearchRetriever:
 
     def test_build_document(self) -> None:
         """Test the _build_document method."""
-        result = self.sample_result["results"][0]
+        result = self.retriever._client.search.execute.return_value.results[0]
 
         doc = self.retriever._build_document(result)
 
