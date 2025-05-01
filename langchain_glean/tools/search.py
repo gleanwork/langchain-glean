@@ -1,9 +1,9 @@
 from typing import Any, Dict, Union
 
+from glean import errors
 from langchain_core.tools import BaseTool
 from pydantic import Field
 
-from langchain_glean.client.glean_client import GleanClientError, GleanConnectionError, GleanHTTPError
 from langchain_glean.retrievers import GleanSearchRetriever
 
 
@@ -55,15 +55,11 @@ class GleanSearchTool(BaseTool):
 
             try:
                 docs = self.retriever.invoke(query_text, **search_kwargs)
-            except GleanHTTPError as http_err:
+            except errors.GleanError as http_err:
                 error_details = f"HTTP Error {http_err.status_code}"
                 if http_err.response:
                     error_details += f": {http_err.response}"
                 return f"Error searching Glean: {error_details}"
-            except GleanConnectionError as conn_err:
-                return f"Error connecting to Glean: {str(conn_err)}"
-            except GleanClientError as client_err:
-                return f"Glean client error: {str(client_err)}"
 
             if not docs:
                 return "No results found."
@@ -116,15 +112,11 @@ class GleanSearchTool(BaseTool):
 
             try:
                 docs = await self.retriever.ainvoke(query_text, **search_kwargs)
-            except GleanHTTPError as http_err:
+            except errors.GleanError as http_err:
                 error_details = f"HTTP Error {http_err.status_code}"
                 if http_err.response:
                     error_details += f": {http_err.response}"
                 return f"Error searching Glean: {error_details}"
-            except GleanConnectionError as conn_err:
-                return f"Error connecting to Glean: {str(conn_err)}"
-            except GleanClientError as client_err:
-                return f"Glean client error: {str(client_err)}"
 
             if not docs:
                 return "No results found."
