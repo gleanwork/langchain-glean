@@ -1,5 +1,5 @@
 """LangChain Chat Models for Glean."""
 
-from langchain_glean.chat_models.chat import ChatGlean
+from langchain_glean.chat_models.chat import ChatBasicRequest, ChatGlean
 
-__all__ = ["ChatGlean"]
+__all__ = ["ChatGlean", "ChatBasicRequest"]

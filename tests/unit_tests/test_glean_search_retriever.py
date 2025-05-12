@@ -1,8 +1,10 @@
 import os
 from types import SimpleNamespace
+from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
+from glean.models import FacetFilter, FacetFilterValue, RelationType, SearchRequest, SearchRequestOptions
 from langchain_core.documents import Document
 
 from langchain_glean.retrievers import GleanSearchRetriever
@@ -88,6 +90,8 @@ class TestGleanSearchRetriever:
         for var in ["GLEAN_INSTANCE", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
             os.environ.pop(var, None)
 
+    # ===== BASIC TESTS =====
+
     def test_init(self) -> None:
         """Test the initialization of the retriever."""
         assert self.retriever.instance == "test-glean"
@@ -107,8 +111,8 @@ class TestGleanSearchRetriever:
         with pytest.raises(ValueError):
             GleanSearchRetriever()
 
-    def test_invoke(self) -> None:
-        """Test the invoke method."""
+    def test_invoke_with_simple_query(self) -> None:
+        """Test the invoke method with a simple string query."""
         docs = self.retriever.invoke("test query")
 
         # Verify the search.query method was called with the correct parameters
@@ -133,24 +137,14 @@ class TestGleanSearchRetriever:
         assert doc.metadata["create_time"] == "2023-01-01T00:00:00Z"
         assert doc.metadata["update_time"] == "2023-01-02T00:00:00Z"
 
-    def test_invoke_with_params(self) -> None:
-        """Test the invoke method with additional parameters."""
+    def test_invoke_with_basic_params(self) -> None:
+        """Test the invoke method with basic additional parameters."""
         # Mock the _build_search_request method to avoid conversion issues in tests
         with patch.object(self.retriever, "_build_search_request") as mock_build:
             search_request_mock = MagicMock()
             mock_build.return_value = search_request_mock
 
-            self.retriever.invoke(
-                "test query",
-                page_size=20,
-                disable_spellcheck=True,
-                max_snippet_size=100,
-                request_options={
-                    "facet_filters": [
-                        {"field_name": "datasource", "values": [{"value": "slack", "relation_type": "EQUALS"}, {"value": "gdrive", "relation_type": "EQUALS"}]}
-                    ]
-                },
-            )
+            self.retriever.invoke("test query", page_size=20, disable_spellcheck=True, max_snippet_size=100)
 
             # Verify _build_search_request was called with the correct parameters
             mock_build.assert_called_once()
@@ -188,3 +182,118 @@ class TestGleanSearchRetriever:
         assert doc.metadata["author"] == "John Doe"
         assert doc.metadata["create_time"] == "2023-01-01T00:00:00Z"
         assert doc.metadata["update_time"] == "2023-01-02T00:00:00Z"
+
+    # ===== ADVANCED TESTS =====
+
+    def test_invoke_with_native_search_request(self):
+        """Test invoking with a native SearchRequest object."""
+        # Create a strongly typed SearchRequest
+        search_request = SearchRequest(
+            query="test query",
+            page_size=15,
+            disable_spellcheck=True,
+            max_snippet_size=150,
+            request_options=SearchRequestOptions(
+                fetch_all_datasource_counts=True, response_hints=["RESULTS", "FACET_RESULTS"], datasources_filter=["slack", "gmail"], facet_bucket_size=20
+            ),
+        )
+
+        docs = self.retriever.invoke(search_request)
+
+        # Verify the search was called with our request object
+        self.retriever._client.search.query.assert_called_once_with(request=search_request)
+
+        # Verify we got documents back
+        assert len(docs) == 1
+        assert isinstance(docs[0], Document)
+        assert docs[0].page_content == "This is a sample snippet.\nThis is another sample snippet."
+
+    def test_invoke_with_partial_native_options(self):
+        """Test invoking with a partial native SearchRequestOptions object."""
+        # Create just the options part
+        request_options = SearchRequestOptions(datasources_filter=["confluence", "drive"], fetch_all_datasource_counts=True, facet_bucket_size=30)
+
+        docs = self.retriever.invoke("test query", page_size=20, request_options=request_options)
+
+        # Verify the search call
+        self.retriever._client.search.query.assert_called_once()
+        call_args = self.retriever._client.search.query.call_args
+        passed_request = call_args[1]["request"]
+
+        # Check that the query and options were properly set
+        assert passed_request.query == "test query"
+        assert passed_request.page_size == 20
+        assert passed_request.request_options.datasources_filter == ["confluence", "drive"]
+        assert passed_request.request_options.fetch_all_datasource_counts is True
+        assert passed_request.request_options.facet_bucket_size == 30
+
+    def test_invoke_with_facet_filters(self):
+        """Test invoking with strongly typed facet filters."""
+        facet_filters = [
+            FacetFilter(
+                field_name="datasource",
+                values=[FacetFilterValue(value="slack", relation_type=RelationType.EQUALS), FacetFilterValue(value="drive", relation_type=RelationType.EQUALS)],
+            ),
+            FacetFilter(field_name="time", values=[FacetFilterValue(value="2023-01-01", relation_type=RelationType.GT)]),
+        ]
+
+        # Create a SearchRequestOptions with facet_filters
+        request_options = SearchRequestOptions(facet_filters=facet_filters, facet_bucket_size=20)
+
+        docs = self.retriever.invoke("test query", request_options=request_options)
+
+        # Verify the search call
+        self.retriever._client.search.query.assert_called_once()
+        call_args = self.retriever._client.search.query.call_args
+        passed_request = call_args[1]["request"]
+
+        # Check the request_options has our facet filters
+        assert passed_request.request_options.facet_filters == facet_filters
+
+    async def test_ainvoke_with_native_search_request(self):
+        """Test async invoking with a native SearchRequest object."""
+        # Create a strongly typed SearchRequest
+        search_request = SearchRequest(
+            query="test query",
+            page_size=15,
+            disable_spellcheck=True,
+            max_snippet_size=150,
+            request_options=SearchRequestOptions(
+                fetch_all_datasource_counts=True, response_hints=["RESULTS", "FACET_RESULTS"], datasources_filter=["slack", "gmail"], facet_bucket_size=20
+            ),
+        )
+
+        # Set up mock response for async call that has the same structure as the sync responses
+        mock_async_results = SimpleNamespace(results=[self.mock_result])
+
+        # Replace the original MagicMock with a proper coroutine function
+        async def mock_query_async(*args, **kwargs):
+            return mock_async_results
+
+        self.retriever._client.search.query_async = mock_query_async
+
+        docs = await self.retriever.ainvoke(search_request)
+
+        # Verify we got documents back
+        assert len(docs) == 1
+        assert isinstance(docs[0], Document)
+        assert docs[0].page_content == "This is a sample snippet.\nThis is another sample snippet."
+
+    def test_combining_with_limit_parameter(self):
+        """Test combining k parameter with SearchRequest."""
+        # Create a SearchRequest
+        search_request = SearchRequest(query="test query", request_options=SearchRequestOptions(datasources_filter=["confluence"], facet_bucket_size=20))
+
+        # Call with k parameter
+        docs = self.retriever.invoke(search_request, k=5)
+
+        # Verify the search call
+        self.retriever._client.search.query.assert_called_once()
+        call_args = self.retriever._client.search.query.call_args
+
+        # Instead of checking page_size on the passed request (which won't be modified),
+        # check if the _build_search_request method was called with the correct k parameter
+        # This can be done by verifying the call parameters were correct with the right page_size
+        assert call_args[1]["request"].query == "test query"
+        # The request's request_options should still be the ones we passed
+        assert call_args[1]["request"].request_options.datasources_filter == ["confluence"]

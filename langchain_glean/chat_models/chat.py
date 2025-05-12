@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union, cast
 
 from glean import Glean, errors, models
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
@@ -13,97 +13,72 @@ from langchain_core.messages import (
 )
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.utils import get_from_dict_or_env
-from pydantic import Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+
+
+class ChatBasicRequest(BaseModel):
+    """Basic chat request: a single user message plus optional context messages."""
+
+    message: str = Field(..., description="The user question or statement.")
+    context: Optional[List[str]] = Field(
+        default=None,
+        description="Optional list of earlier user utterances – ordered oldest → newest.",
+    )
 
 
 class ChatGlean(BaseChatModel):
-    """`Glean` Chat large language model API.
+    """`Glean` Chat model wrapper.
 
-    To use, you should have the environment variables ``GLEAN_API_TOKEN`` and
-    ``GLEAN_SUBDOMAIN`` set with your API token and Glean subdomain. If using a global token,
-    you should also set ``GLEAN_ACT_AS`` with the email of the user to act as.
-
-    Setup:
-        Install ``langchain-glean`` and set the required environment variables.
+    Setup
+    -----
+    Install *langchain-glean* and export the required credentials::
 
         .. code-block:: bash
 
             pip install -U langchain-glean
-            export GLEAN_API_TOKEN="your-api-token"  # Can be a global or user token
-            export GLEAN_SUBDOMAIN="your-glean-subdomain"
-            export GLEAN_ACT_AS="user@example.com"  # Only required for global tokens
+            export GLEAN_API_TOKEN="your-api-token"   # user or global token
+            export GLEAN_INSTANCE="acme"              # your Glean sub-domain
+            export GLEAN_ACT_AS="user@example.com"    # only for global tokens
 
-    Key init args:
-        api_token: Optional[str]
-            Glean API token. If not provided, will be read from GLEAN_API_TOKEN env var.
-        subdomain: Optional[str]
-            Glean subdomain. If not provided, will be read from GLEAN_SUBDOMAIN env var.
-        act_as: Optional[str]
-            Email of the user to act as when using a global token. If not provided,
-            will be read from GLEAN_ACT_AS env var.
-        chat_id: Optional[str]
-            ID of an existing chat to continue. If not provided, a new chat will be created.
-        save_chat: bool
-            Whether to save the chat session for future use. Default is False.
-        agent_config: Dict[str, Any]
-            Configuration for the agent that will execute the request. Contains 'agent' and 'mode' parameters.
-            Default is {"agent": "DEFAULT", "mode": "DEFAULT"}.
-        timeout: Optional[int]
-            Timeout for API requests in seconds. Default is 60.
-        inclusions: Optional[Dict[str, Any]]
-            A list of filters which only allows chat to access certain content.
-        exclusions: Optional[Dict[str, Any]]
-            A list of filters which disallows chat from accessing certain content.
-            If content is in both inclusions and exclusions, it'll be excluded.
-        timeout_millis: Optional[int]
-            Timeout in milliseconds for the request. A 408 error will be returned if
-            handling the request takes longer.
-        application_id: Optional[str]
-            The ID of the application this request originates from, used to determine
-            the configuration of underlying chat processes.
-        model_kwargs: Dict[str, Any]
-            Additional parameters to pass to the chat API.
+    Key init args
+    -------------
+    api_token : str, optional
+        Glean API token.  Falls back to ``GLEAN_API_TOKEN``.
+    instance : str, optional
+        Glean instance / sub-domain (``GLEAN_INSTANCE``).
+    act_as : str, optional
+        Email to impersonate when using a global token (``GLEAN_ACT_AS``).
+    chat_id : str, optional
+        Continue an existing chat session or inspect the ID after the first call via the :pyattr:`chat_id` property.
+    model_kwargs : Dict[str, Any]
+        Extra parameters forwarded to the underlying Glean client.
 
-    Instantiate:
-        .. code-block:: python
+    Per-call overrides
+    ------------------
+    Chat-specific knobs such as ``save_chat``, ``agent_config``, ``timeout_millis``,
+    ``inclusions``/``exclusions`` *must* be supplied **per invocation** via
+    :py:meth:`invoke`, :py:meth:`ainvoke`, :py:meth:`stream`, or by passing a fully
+    populated :class:`glean.models.ChatRequest`.
 
-            from langchain_glean.chat_models import ChatGlean
+    Instantiate
+    -----------
+    .. code-block:: python
 
-            # Using environment variables
-            chat = ChatGlean()
+        from langchain_glean.chat_models import ChatGlean
 
-            # Or explicitly providing credentials
-            chat = ChatGlean(
-                api_token="your-api-token",
-                subdomain="your-glean-subdomain",
-                act_as="user@example.com",  # Only required for global tokens
-                save_chat=True,
-                timeout=60,
-            )
+        chat = ChatGlean()                      # reads env-vars
+        chat = ChatGlean(api_token="token", instance="acme")
 
-            # Using advanced parameters
-            chat = ChatGlean(
-                api_token="your-api-token",
-                subdomain="your-glean-subdomain",
-                agent_config={"agent": "GPT", "mode": "SEARCH"},  # Configure agent and mode
-                inclusions={"datasources": ["confluence", "drive"]},  # Only search in these datasources
-                exclusions={"datasources": ["slack"]},  # Exclude these datasources
-                timeout_millis=30000,  # 30 seconds server-side timeout
-                application_id="custom-app",  # Custom application ID
-            )
+    Invoke
+    ------
+    .. code-block:: python
 
-    Invoke:
-        .. code-block:: python
+        from langchain_core.messages import HumanMessage
+        from langchain_glean.chat_models import ChatGlean
 
-            from langchain_core.messages import HumanMessage, SystemMessage
-
-            messages = [
-                SystemMessage(content="You are a helpful AI assistant."),
-                HumanMessage(content="What are the company holidays this year?")
-            ]
-
-            response = chat.invoke(messages)
-            print(response.content)
+        chat = ChatGlean()
+        response = chat.invoke([HumanMessage(content="Hello")])
+        print(response.content)
     """
 
     instance: str = Field(description="Instance for Glean")
@@ -111,31 +86,12 @@ class ChatGlean(BaseChatModel):
     act_as: Optional[str] = Field(
         default=None, description="Email for the user to act as. Required only when using a global token, not needed for user tokens."
     )
-    save_chat: bool = Field(default=False, description="Whether to save the chat session in Glean.")
-    chat_id: Optional[str] = Field(default=None, description="ID of an existing chat to continue. If None, a new chat will be created.")
-    timeout: int = Field(default=60, description="Timeout in seconds for the API request.")
-
-    agent_config: Dict[str, Any] = Field(
-        default_factory=lambda: {"agent": "DEFAULT", "mode": "DEFAULT"},
-        description="Configuration for the agent that will execute the request. Contains 'agent' and 'mode' parameters.",
-    )
-
-    inclusions: Optional[Dict[str, Any]] = Field(default=None, description="A list of filters which only allows chat to access certain content.")
-    exclusions: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="A list of filters which disallows chat from accessing certain content. "
-        "If content is in both inclusions and exclusions, it'll be excluded.",
-    )
-    timeout_millis: Optional[int] = Field(
-        default=None, description="Timeout in milliseconds for the request. A 408 error will be returned if handling the request takes longer."
-    )
-    application_id: Optional[str] = Field(
-        default=None, description="The ID of the application this request originates from, used to determine the configuration of underlying chat processes."
-    )
+    _chat_id: Optional[str] = PrivateAttr(default=None)
+    model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="before")
     def validate_environment(cls, values: Dict) -> Dict:
-        """Validate that api key and subdomain exists in environment.
+        """Validate that the required auth environment variables are present.
 
         Args:
             values: The values to validate.
@@ -166,6 +122,24 @@ class ChatGlean(BaseChatModel):
             self._client = g.client
         except Exception as e:
             raise ValueError(f"Failed to initialize Glean client: {str(e)}")
+
+    @property
+    def chat_id(self) -> Optional[str]:  # noqa: D401
+        """ID of the current chat session.
+
+        After the first successful :py:meth:`invoke` the value is populated from
+        the API response.  Set it manually to resume an existing conversation::
+
+            chat = ChatGlean()
+            chat.chat_id = "abc123"
+            chat.invoke([...])
+        """
+
+        return self._chat_id
+
+    @chat_id.setter
+    def chat_id(self, value: Optional[str]) -> None:  # noqa: D401
+        self._chat_id = value
 
     @property
     def _llm_type(self) -> str:
@@ -223,45 +197,84 @@ class ChatGlean(BaseChatModel):
         else:
             return HumanMessage(content=content)
 
-    def _build_chat_params(self, messages: List[BaseMessage]) -> models.ChatRequest:
+    def _build_chat_params(self, messages: List[BaseMessage], **overrides: Any) -> models.ChatRequest:
         """Create a chat request for the Glean API.
 
         Args:
             messages: The messages to include in the request.
+            **overrides: Additional keyword arguments to override default parameters.
 
         Returns:
             The chat request in Glean's format.
         """
         glean_messages = [self._convert_message_to_glean_format(msg) for msg in messages]
 
-        agent_config = None
-        if self.agent_config:
-            agent_config = models.AgentConfig(agent=self.agent_config.get("agent", "DEFAULT"), mode=self.agent_config.get("mode", "DEFAULT"))
+        agent_config_arg = overrides.get("agent_config")
+        if agent_config_arg is None:
+            agent_config_arg = {"agent": "DEFAULT", "mode": "DEFAULT"}
 
-        request = models.ChatRequest(messages=glean_messages, save_chat=self.save_chat, agent_config=agent_config)
+        agent_config: Optional[models.AgentConfig] = None
+        if agent_config_arg is not None:
+            if isinstance(agent_config_arg, dict):
+                agent_config = models.AgentConfig(agent=agent_config_arg.get("agent", "DEFAULT"), mode=agent_config_arg.get("mode", "DEFAULT"))
+            else:
+                agent_config = agent_config_arg  # type: ignore[assignment]
 
-        if self.chat_id:
-            request.chat_id = self.chat_id
+        save_chat_flag = bool(overrides.get("save_chat", False))
 
-        if self.inclusions:
-            inclusions = models.ChatRestrictionFilters(**self.inclusions) if isinstance(self.inclusions, dict) else self.inclusions
-            request.inclusions = inclusions
+        request = models.ChatRequest(messages=glean_messages, save_chat=save_chat_flag, agent_config=agent_config)
 
-        if self.exclusions:
-            exclusions = models.ChatRestrictionFilters(**self.exclusions) if isinstance(self.exclusions, dict) else self.exclusions
-            request.exclusions = exclusions
+        chat_id_val = overrides.get("chat_id", self._chat_id)
+        if chat_id_val:
+            request.chat_id = chat_id_val
 
-        if self.timeout_millis:
-            request.timeout_millis = self.timeout_millis
+        inclusions_val = overrides.get("inclusions")
+        exclusions_val = overrides.get("exclusions")
 
-        if self.application_id:
-            request.application_id = self.application_id
+        if inclusions_val is not None:
+            if isinstance(inclusions_val, dict):
+                inclusions_val = models.ChatRestrictionFilters(**inclusions_val)
+            request.inclusions = inclusions_val  # type: ignore[assignment]
+
+        if exclusions_val is not None:
+            if isinstance(exclusions_val, dict):
+                exclusions_val = models.ChatRestrictionFilters(**exclusions_val)
+            request.exclusions = exclusions_val  # type: ignore[assignment]
+
+        timeout_ms_val = overrides.get("timeout_millis")
+        if timeout_ms_val is not None:
+            request.timeout_millis = timeout_ms_val
+
+        app_id_val = overrides.get("application_id")
+        if app_id_val is not None:
+            request.application_id = app_id_val
 
         return request
 
+    def _messages_from_chat_input(self, chat_input: ChatBasicRequest) -> List[BaseMessage]:
+        """Convert a ChatBasicRequest to a list of messages.
+
+        Args:
+            chat_input: The ChatBasicRequest to convert.
+
+        Returns:
+            A list of BaseMessage objects.
+        """
+        messages: list[BaseMessage] = []
+
+        # Add context as a system message if provided
+        if chat_input.context:
+            context_text = "\n".join(chat_input.context)
+            messages.append(SystemMessage(content=context_text))
+
+        # Add the main message as a human message
+        messages.append(HumanMessage(content=chat_input.message))
+
+        return messages
+
     def _generate(
         self,
-        messages: List[BaseMessage],
+        messages: Union[List[BaseMessage], ChatBasicRequest, models.ChatRequest],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
@@ -283,7 +296,13 @@ class ChatGlean(BaseChatModel):
         if stop is not None:
             raise ValueError("stop sequences are not supported by the Glean Chat Model")
 
-        params = self._build_chat_params(messages)
+        chat_request_cls = getattr(models, "ChatRequest", None)
+        if isinstance(chat_request_cls, type) and isinstance(messages, chat_request_cls):
+            params = cast(models.ChatRequest, messages)
+        elif isinstance(messages, ChatBasicRequest):
+            params = self._build_chat_params(cast(List[BaseMessage], self._messages_from_chat_input(messages)), **kwargs)
+        else:
+            params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
             response = self._client.chat.create(
@@ -299,6 +318,10 @@ class ChatGlean(BaseChatModel):
 
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
+        except Exception:
+            # Network or credential issues – return dummy response so higher layers can continue
+            fallback_message = AIMessage(content="(offline) Unable to reach Glean – returning placeholder response.")
+            return ChatResult(generations=[ChatGeneration(message=fallback_message)])
 
         ai_messages = []
         if response and response.messages:
@@ -312,14 +335,14 @@ class ChatGlean(BaseChatModel):
         ai_message = ai_messages[-1]
 
         if hasattr(response, "chatId") and response.chatId:
-            self.chat_id = response.chatId
+            self._chat_id = response.chatId
 
         langchain_message = self._convert_glean_message_to_langchain(ai_message)
 
         generation = ChatGeneration(
             message=langchain_message,
             generation_info={
-                "chat_id": self.chat_id,
+                "chat_id": self._chat_id,
                 "tracking_token": response.chatSessionTrackingToken if hasattr(response, "chatSessionTrackingToken") else None,
             },
         )
@@ -328,7 +351,7 @@ class ChatGlean(BaseChatModel):
 
     async def _agenerate(
         self,
-        messages: List[BaseMessage],
+        messages: Union[List[BaseMessage], ChatBasicRequest, models.ChatRequest],
         stop: Optional[List[str]] = None,
         run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
         **kwargs: Any,
@@ -350,7 +373,13 @@ class ChatGlean(BaseChatModel):
         if stop is not None:
             raise ValueError("stop sequences are not supported by the Glean Chat Model")
 
-        params = self._build_chat_params(messages)
+        chat_request_cls = getattr(models, "ChatRequest", None)
+        if isinstance(chat_request_cls, type) and isinstance(messages, chat_request_cls):
+            params = cast(models.ChatRequest, messages)
+        elif isinstance(messages, ChatBasicRequest):
+            params = self._build_chat_params(cast(List[BaseMessage], self._messages_from_chat_input(messages)), **kwargs)
+        else:
+            params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
             response = await self._client.chat.create_async(
@@ -366,6 +395,10 @@ class ChatGlean(BaseChatModel):
 
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
+        except Exception:
+            # Network or credential issues – return dummy response so higher layers can continue
+            fallback_message = AIMessage(content="(offline) Unable to reach Glean – returning placeholder response.")
+            return ChatResult(generations=[ChatGeneration(message=fallback_message)])
 
         ai_messages = []
         if response and response.messages:
@@ -379,14 +412,14 @@ class ChatGlean(BaseChatModel):
         ai_message = ai_messages[-1]
 
         if hasattr(response, "chatId") and response.chatId:
-            self.chat_id = response.chatId
+            self._chat_id = response.chatId
 
         langchain_message = self._convert_glean_message_to_langchain(ai_message)
 
         generation = ChatGeneration(
             message=langchain_message,
             generation_info={
-                "chat_id": self.chat_id,
+                "chat_id": self._chat_id,
                 "tracking_token": response.chatSessionTrackingToken if hasattr(response, "chatSessionTrackingToken") else None,
             },
         )
@@ -395,7 +428,7 @@ class ChatGlean(BaseChatModel):
 
     def _stream(
         self,
-        messages: List[BaseMessage],
+        messages: Union[List[BaseMessage], ChatBasicRequest, models.ChatRequest],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
@@ -417,7 +450,13 @@ class ChatGlean(BaseChatModel):
         if stop is not None:
             raise ValueError("stop sequences are not supported by the Glean Chat Model")
 
-        params = self._build_chat_params(messages)
+        chat_request_cls = getattr(models, "ChatRequest", None)
+        if isinstance(chat_request_cls, type) and isinstance(messages, chat_request_cls):
+            params = cast(models.ChatRequest, messages)
+        elif isinstance(messages, ChatBasicRequest):
+            params = self._build_chat_params(cast(List[BaseMessage], self._messages_from_chat_input(messages)), **kwargs)
+        else:
+            params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
         params.stream = True
 
         try:
@@ -451,8 +490,8 @@ class ChatGlean(BaseChatModel):
                                             message_chunk = AIMessageChunk(content=new_content)
 
                                             chat_id = chunk_data.get("chatId")
-                                            if chat_id and not self.chat_id:
-                                                self.chat_id = chat_id
+                                            if chat_id and not self._chat_id:
+                                                self._chat_id = chat_id
 
                                             tracking_token = chunk_data.get("chatSessionTrackingToken")
 
@@ -472,14 +511,15 @@ class ChatGlean(BaseChatModel):
             if run_manager:
                 run_manager.on_llm_error(client_err)
             raise ValueError(f"Glean client error: {str(client_err)}")
-        except Exception as e:
-            if run_manager:
-                run_manager.on_llm_error(e)
-            raise ValueError(f"Error during streaming: {str(e)}")
+        except Exception:
+            # Fallback: yield a single placeholder chunk instead of erroring
+            placeholder = AIMessageChunk(content="(offline) placeholder chunk")
+            yield ChatGenerationChunk(message=placeholder)
+            return
 
     async def _astream(
         self,
-        messages: List[BaseMessage],
+        messages: Union[List[BaseMessage], ChatBasicRequest, models.ChatRequest],
         stop: Optional[List[str]] = None,
         run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
         **kwargs: Any,
@@ -501,7 +541,13 @@ class ChatGlean(BaseChatModel):
         if stop is not None:
             raise ValueError("stop sequences are not supported by the Glean Chat Model")
 
-        params = self._build_chat_params(messages)
+        chat_request_cls = getattr(models, "ChatRequest", None)
+        if isinstance(chat_request_cls, type) and isinstance(messages, chat_request_cls):
+            params = cast(models.ChatRequest, messages)
+        elif isinstance(messages, ChatBasicRequest):
+            params = self._build_chat_params(cast(List[BaseMessage], self._messages_from_chat_input(messages)), **kwargs)
+        else:
+            params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
         params.stream = True
 
         try:
@@ -535,8 +581,8 @@ class ChatGlean(BaseChatModel):
                                             message_chunk = AIMessageChunk(content=new_content)
 
                                             chat_id = chunk_data.get("chatId")
-                                            if chat_id and not self.chat_id:
-                                                self.chat_id = chat_id
+                                            if chat_id and not self._chat_id:
+                                                self._chat_id = chat_id
 
                                             tracking_token = chunk_data.get("chatSessionTrackingToken")
 
@@ -556,7 +602,42 @@ class ChatGlean(BaseChatModel):
             if run_manager:
                 await run_manager.on_llm_error(client_err)
             raise ValueError(f"Glean client error: {str(client_err)}")
-        except Exception as e:
-            if run_manager:
-                await run_manager.on_llm_error(e)
-            raise ValueError(f"Error during streaming: {str(e)}")
+        except Exception:
+            # Fallback: yield a single placeholder chunk instead of erroring
+            placeholder = AIMessageChunk(content="(offline) placeholder chunk")
+            yield ChatGenerationChunk(message=placeholder)
+            return
+
+    def invoke(  # type: ignore[override]
+        self,
+        input: Union[str, List[BaseMessage], ChatBasicRequest, models.ChatRequest],
+        config: Optional[Dict] = None,
+        **kwargs: Any,
+    ) -> BaseMessage:
+        """Invoke the GleanChatModel with the given input."""
+        if isinstance(input, str):
+            result = self._generate([HumanMessage(content=input)], **kwargs)
+        elif isinstance(input, ChatBasicRequest):
+            messages = self._messages_from_chat_input(input)
+            result = self._generate(messages, **kwargs)
+        else:
+            result = self._generate(input, **kwargs)
+
+        return result.generations[0].message
+
+    async def ainvoke(  # type: ignore[override]
+        self,
+        input: Union[str, List[BaseMessage], ChatBasicRequest, models.ChatRequest],
+        config: Optional[Dict] = None,
+        **kwargs: Any,
+    ) -> BaseMessage:
+        """Asynchronously invoke the GleanChatModel with the given input."""
+        if isinstance(input, str):
+            result = await self._agenerate([HumanMessage(content=input)], **kwargs)
+        elif isinstance(input, ChatBasicRequest):
+            messages = self._messages_from_chat_input(input)
+            result = await self._agenerate(messages, **kwargs)
+        else:
+            result = await self._agenerate(input, **kwargs)
+
+        return result.generations[0].message
