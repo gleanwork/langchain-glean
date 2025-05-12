@@ -139,7 +139,7 @@ class GleanSearchRetriever(BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                response = self._client.search.execute(search_request=search_request)
+                response = self._client.search.query(request=search_request)
 
             except errors.GleanError as client_err:
                 run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
@@ -182,7 +182,7 @@ class GleanSearchRetriever(BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                response = await self._client.search.execute_async(search_request=search_request)
+                response = await self._client.search.query_async(request=search_request)
 
             except errors.GleanError as client_err:
                 await run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
@@ -219,100 +219,113 @@ class GleanSearchRetriever(BaseRetriever):
         Returns:
             A SearchRequest object for the Glean API
         """
-        # Start with query
-        params = {"query": query}
+        # Create SearchRequest object with proper parameters
+        search_request = models.SearchRequest(query=query)
 
-        # Handle k parameter (for LangChain compatibility)
+        # Set page_size if needed
         if "k" in kwargs:
-            params["page_size"] = max(kwargs.get("k"), kwargs.get("page_size", 100))
+            search_request.page_size = max(kwargs.get("k"), kwargs.get("page_size", 100))
         elif self.k is not None:
-            params["page_size"] = max(self.k, kwargs.get("page_size", 100))
+            search_request.page_size = max(self.k, kwargs.get("page_size", 100))
         elif "page_size" in kwargs:
-            params["page_size"] = kwargs["page_size"]
+            search_request.page_size = kwargs["page_size"]
 
-        # Add remaining parameters
-        for key, value in kwargs.items():
-            if key != "k" and key not in params:
-                params[key] = value
+        # Add any other supported parameters
+        if "max_snippet_size" in kwargs:
+            search_request.max_snippet_size = kwargs["max_snippet_size"]
+        if "cursor" in kwargs:
+            search_request.cursor = kwargs["cursor"]
+        if "tracking_token" in kwargs:
+            search_request.tracking_token = kwargs["tracking_token"]
+        if "timeout_millis" in kwargs:
+            search_request.timeout_millis = kwargs["timeout_millis"]
 
-        # Create SearchRequest object
-        return models.SearchRequest(**params)
+        return search_request
 
-    def _build_document(self, result: Dict[str, Any]) -> Document:
+    def _build_document(self, result: models.SearchResult) -> Document:
         """
         Build a LangChain Document object from a Glean search result.
 
         Args:
-            result: Dictionary containing search result data from Glean API
+            result: SearchResult object from Glean API
 
         Returns:
             Document: LangChain Document object built from the result
         """
-        snippets = result.get("snippets", [])
+        snippets = result.snippets if hasattr(result, "snippets") else []
         text_snippets = []
 
-        for snippet in snippets:
-            snippet_text = snippet.get("text", "")
-            if snippet_text:
-                text_snippets.append(snippet_text)
+        if snippets:
+            for snippet in snippets:
+                if hasattr(snippet, "text") and snippet.text:
+                    text_snippets.append(str(snippet.text))
 
         page_content = "\n".join(text_snippets) if text_snippets else ""
 
         if not page_content.strip():
-            page_content = result.get("title", "")
+            page_content = str(result.title) if hasattr(result, "title") and result.title else ""
 
-        document_data = result.get("document", {})
-        document_id = document_data.get("id", "")
+        document_data = result.document if hasattr(result, "document") else None
+        document_id = document_data.id if document_data and hasattr(document_data, "id") else ""
 
+        # Create standard metadata fields
         metadata = {
-            "title": result.get("title", ""),
-            "url": result.get("url", ""),
+            "title": result.title if hasattr(result, "title") else "",
+            "url": result.url if hasattr(result, "url") else "",
             "source": "glean",
             "document_id": document_id,
-            "tracking_token": result.get("trackingToken", ""),
+            "tracking_token": result.tracking_token if hasattr(result, "tracking_token") else "",
         }
 
+        # Add document type info if available
         if document_data:
-            metadata.update(
-                {
-                    "datasource": document_data.get("datasource", ""),
-                    "doc_type": document_data.get("docType", ""),
-                }
-            )
+            if hasattr(document_data, "datasource"):
+                metadata["datasource"] = document_data.datasource
+            if hasattr(document_data, "doc_type"):
+                metadata["doc_type"] = document_data.doc_type
 
-            doc_metadata = document_data.get("metadata", {})
+            doc_metadata = document_data.metadata if hasattr(document_data, "metadata") else None
             if doc_metadata:
-                metadata.update(
-                    {
-                        "datasource_instance": doc_metadata.get("datasourceInstance", ""),
-                        "object_type": doc_metadata.get("objectType", ""),
-                        "mime_type": doc_metadata.get("mimeType", ""),
-                        "logging_id": doc_metadata.get("loggingId", ""),
-                        "visibility": doc_metadata.get("visibility", ""),
-                        "document_category": doc_metadata.get("documentCategory", ""),
-                    }
-                )
+                # Add standard metadata fields from document metadata
+                for src_field, dest_field in [
+                    ("datasourceInstance", "datasource_instance"),
+                    ("objectType", "object_type"),
+                    ("mimeType", "mime_type"),
+                    ("loggingId", "logging_id"),
+                    ("visibility", "visibility"),
+                    ("documentCategory", "document_category"),
+                ]:
+                    if hasattr(doc_metadata, src_field) and getattr(doc_metadata, src_field):
+                        metadata[dest_field] = getattr(doc_metadata, src_field)
 
-                if "createTime" in doc_metadata:
-                    metadata["create_time"] = doc_metadata["createTime"]
-                if "updateTime" in doc_metadata:
-                    metadata["update_time"] = doc_metadata["updateTime"]
+                # Handle timestamps
+                if hasattr(doc_metadata, "createTime") and doc_metadata.createTime:
+                    metadata["create_time"] = doc_metadata.createTime
+                if hasattr(doc_metadata, "updateTime") and doc_metadata.updateTime:
+                    metadata["update_time"] = doc_metadata.updateTime
 
-                if "author" in doc_metadata:
-                    author_data = doc_metadata["author"]
-                    metadata["author"] = author_data.get("name", "")
-                    metadata["author_email"] = author_data.get("email", "")
+                # Handle author info
+                if hasattr(doc_metadata, "author") and doc_metadata.author:
+                    author_data = doc_metadata.author
+                    if hasattr(author_data, "name"):
+                        metadata["author"] = author_data.name
+                    if hasattr(author_data, "email"):
+                        metadata["author_email"] = author_data.email
 
-                if "interactions" in doc_metadata:
-                    interactions = doc_metadata["interactions"]
-                    if "shares" in interactions:
-                        metadata["shared_days_ago"] = interactions["shares"][0].get("numDaysAgo", 0) if interactions["shares"] else 0
+                # Handle interactions
+                if hasattr(doc_metadata, "interactions") and doc_metadata.interactions:
+                    interactions = doc_metadata.interactions
+                    if hasattr(interactions, "shares") and interactions.shares:
+                        days_ago = interactions.shares[0].num_days_ago if hasattr(interactions.shares[0], "num_days_ago") else 0
+                        metadata["shared_days_ago"] = str(days_ago)
 
-        if "clusteredResults" in result:
-            metadata["clustered_results_count"] = len(result["clusteredResults"])
+        # Handle clustered results
+        if hasattr(result, "clustered_results") and result.clustered_results is not None:
+            metadata["clustered_results_count"] = str(len(result.clustered_results))
 
-        if "debugInfo" in result:
-            metadata["debug_info"] = str(result["debugInfo"])
+        # Add debug info if available
+        if hasattr(result, "debug_info"):
+            metadata["debug_info"] = str(result.debug_info)
 
         return Document(
             page_content=page_content,
