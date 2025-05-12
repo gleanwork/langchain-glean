@@ -14,7 +14,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9,<4.0"
 dependencies = [
-    "glean-api-client>=0.2.0",
+    "glean-api-client>=0.3.0",
     "langchain-core>=0.3.45",
 ]
 
