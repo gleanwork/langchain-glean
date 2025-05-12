@@ -115,13 +115,11 @@ class ChatGlean(BaseChatModel):
     chat_id: Optional[str] = Field(default=None, description="ID of an existing chat to continue. If None, a new chat will be created.")
     timeout: int = Field(default=60, description="Timeout in seconds for the API request.")
 
-    # Agent configuration
     agent_config: Dict[str, Any] = Field(
         default_factory=lambda: {"agent": "DEFAULT", "mode": "DEFAULT"},
         description="Configuration for the agent that will execute the request. Contains 'agent' and 'mode' parameters.",
     )
 
-    # Additional parameters from the OpenAPI specification
     inclusions: Optional[Dict[str, Any]] = Field(default=None, description="A list of filters which only allows chat to access certain content.")
     exclusions: Optional[Dict[str, Any]] = Field(
         default=None,
@@ -188,20 +186,16 @@ class ChatGlean(BaseChatModel):
         elif isinstance(message, AIMessage):
             author = models.Author.GLEAN_AI
         elif isinstance(message, SystemMessage):
-            # System messages are treated as context messages in Glean
             author = models.Author.USER
             return models.ChatMessage(author=author, message_type=models.MessageType.CONTEXT, fragments=[models.ChatMessageFragment(text=str(message.content))])
         elif isinstance(message, ChatMessage):
-            # Map custom roles to Glean's format
             if message.role.upper() == "USER":
                 author = models.Author.USER
             elif message.role.upper() == "ASSISTANT" or message.role.upper() == "AI":
                 author = models.Author.GLEAN_AI
             else:
-                # Default to USER for unknown roles
                 author = models.Author.USER
         else:
-            # Default to USER for unknown message types
             author = models.Author.USER
 
         return models.ChatMessage(author=author, message_type=models.MessageType.CONTENT, fragments=[models.ChatMessageFragment(text=str(message.content))])
@@ -240,19 +234,15 @@ class ChatGlean(BaseChatModel):
         """
         glean_messages = [self._convert_message_to_glean_format(msg) for msg in messages]
 
-        # Convert agent_config to GleanAgentConfig
         agent_config = None
         if self.agent_config:
             agent_config = models.AgentConfig(agent=self.agent_config.get("agent", "DEFAULT"), mode=self.agent_config.get("mode", "DEFAULT"))
 
-        # Build ChatRequest with required parameters
         request = models.ChatRequest(messages=glean_messages, save_chat=self.save_chat, agent_config=agent_config)
 
-        # Add optional parameters if they are set
         if self.chat_id:
             request.chat_id = self.chat_id
 
-        # Convert inclusions/exclusions to proper type if needed
         if self.inclusions:
             inclusions = models.ChatRestrictionFilters(**self.inclusions) if isinstance(self.inclusions, dict) else self.inclusions
             request.inclusions = inclusions
@@ -296,7 +286,6 @@ class ChatGlean(BaseChatModel):
         params = self._build_chat_params(messages)
 
         try:
-            # Call chat.create with the chat request
             response = self._client.chat.create(
                 messages=params.messages,
                 save_chat=params.save_chat,
@@ -311,7 +300,6 @@ class ChatGlean(BaseChatModel):
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
 
-        # Extract AI messages from the response
         ai_messages = []
         if response and response.messages:
             ai_messages = [
@@ -323,13 +311,11 @@ class ChatGlean(BaseChatModel):
 
         ai_message = ai_messages[-1]
 
-        # Use proper attribute access for ChatResponse
         if hasattr(response, "chatId") and response.chatId:
             self.chat_id = response.chatId
 
         langchain_message = self._convert_glean_message_to_langchain(ai_message)
 
-        # Create the generation with metadata
         generation = ChatGeneration(
             message=langchain_message,
             generation_info={
@@ -367,7 +353,6 @@ class ChatGlean(BaseChatModel):
         params = self._build_chat_params(messages)
 
         try:
-            # Call chat.create_async with the chat request
             response = await self._client.chat.create_async(
                 messages=params.messages,
                 save_chat=params.save_chat,
@@ -382,7 +367,6 @@ class ChatGlean(BaseChatModel):
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
 
-        # Extract AI messages from the response
         ai_messages = []
         if response and response.messages:
             ai_messages = [
@@ -394,13 +378,11 @@ class ChatGlean(BaseChatModel):
 
         ai_message = ai_messages[-1]
 
-        # Use proper attribute access for ChatResponse
         if hasattr(response, "chatId") and response.chatId:
             self.chat_id = response.chatId
 
         langchain_message = self._convert_glean_message_to_langchain(ai_message)
 
-        # Create the generation with metadata
         generation = ChatGeneration(
             message=langchain_message,
             generation_info={
@@ -439,7 +421,6 @@ class ChatGlean(BaseChatModel):
         params.stream = True
 
         try:
-            # Use the chat streaming endpoint with proper parameters
             response_stream = self._client.chat.create_stream(
                 messages=params.messages,
                 save_chat=params.save_chat,
@@ -452,13 +433,11 @@ class ChatGlean(BaseChatModel):
                 stream=True,
             )
 
-            # Parse the response stream line by line
             for line in response_stream.splitlines():
                 if not line.strip():
                     continue
 
                 try:
-                    # Parse the JSON line into a ChatResponse object
                     import json
 
                     chunk_data = json.loads(line)
@@ -526,7 +505,6 @@ class ChatGlean(BaseChatModel):
         params.stream = True
 
         try:
-            # Use the async chat streaming endpoint with proper parameters
             response_stream = await self._client.chat.create_stream_async(
                 messages=params.messages,
                 save_chat=params.save_chat,
@@ -539,13 +517,11 @@ class ChatGlean(BaseChatModel):
                 stream=True,
             )
 
-            # Parse the response stream line by line
             for line in response_stream.splitlines():
                 if not line.strip():
                     continue
 
                 try:
-                    # Parse the JSON line into a ChatResponse object
                     import json
 
                     chunk_data = json.loads(line)

@@ -135,7 +135,6 @@ class GleanSearchRetriever(BaseRetriever):
             A list of documents relevant to the query
         """
         try:
-            # Convert keyword arguments to a proper SearchRequest object
             search_request = self._build_search_request(query, **kwargs)
 
             try:
@@ -155,7 +154,6 @@ class GleanSearchRetriever(BaseRetriever):
                         run_manager.on_retriever_error(doc_error)
                         continue
 
-            # Limit the number of documents based on the k parameter
             k_limit = kwargs.get("k") if "k" in kwargs else self.k
             if k_limit is not None and isinstance(k_limit, int):
                 documents = documents[:k_limit]
@@ -178,7 +176,6 @@ class GleanSearchRetriever(BaseRetriever):
             A list of documents relevant to the query
         """
         try:
-            # Convert keyword arguments to a proper SearchRequest object
             search_request = self._build_search_request(query, **kwargs)
 
             try:
@@ -198,7 +195,6 @@ class GleanSearchRetriever(BaseRetriever):
                         await run_manager.on_retriever_error(doc_error)
                         continue
 
-            # Limit the number of documents based on the k parameter
             k_limit = kwargs.get("k") if "k" in kwargs else self.k
             if k_limit is not None and isinstance(k_limit, int):
                 documents = documents[:k_limit]
@@ -219,10 +215,8 @@ class GleanSearchRetriever(BaseRetriever):
         Returns:
             A SearchRequest object for the Glean API
         """
-        # Create SearchRequest object with proper parameters
         search_request = models.SearchRequest(query=query)
 
-        # Set page_size if needed
         if "k" in kwargs:
             search_request.page_size = max(kwargs.get("k"), kwargs.get("page_size", 100))
         elif self.k is not None:
@@ -230,7 +224,6 @@ class GleanSearchRetriever(BaseRetriever):
         elif "page_size" in kwargs:
             search_request.page_size = kwargs["page_size"]
 
-        # Add any other supported parameters
         if "max_snippet_size" in kwargs:
             search_request.max_snippet_size = kwargs["max_snippet_size"]
         if "cursor" in kwargs:
@@ -268,7 +261,6 @@ class GleanSearchRetriever(BaseRetriever):
         document_data = result.document if hasattr(result, "document") else None
         document_id = document_data.id if document_data and hasattr(document_data, "id") else ""
 
-        # Create standard metadata fields
         metadata = {
             "title": result.title if hasattr(result, "title") else "",
             "url": result.url if hasattr(result, "url") else "",
@@ -277,7 +269,6 @@ class GleanSearchRetriever(BaseRetriever):
             "tracking_token": result.tracking_token if hasattr(result, "tracking_token") else "",
         }
 
-        # Add document type info if available
         if document_data:
             if hasattr(document_data, "datasource"):
                 metadata["datasource"] = document_data.datasource
@@ -286,7 +277,6 @@ class GleanSearchRetriever(BaseRetriever):
 
             doc_metadata = document_data.metadata if hasattr(document_data, "metadata") else None
             if doc_metadata:
-                # Add standard metadata fields from document metadata
                 for src_field, dest_field in [
                     ("datasourceInstance", "datasource_instance"),
                     ("objectType", "object_type"),
@@ -298,13 +288,11 @@ class GleanSearchRetriever(BaseRetriever):
                     if hasattr(doc_metadata, src_field) and getattr(doc_metadata, src_field):
                         metadata[dest_field] = getattr(doc_metadata, src_field)
 
-                # Handle timestamps
                 if hasattr(doc_metadata, "createTime") and doc_metadata.createTime:
                     metadata["create_time"] = doc_metadata.createTime
                 if hasattr(doc_metadata, "updateTime") and doc_metadata.updateTime:
                     metadata["update_time"] = doc_metadata.updateTime
 
-                # Handle author info
                 if hasattr(doc_metadata, "author") and doc_metadata.author:
                     author_data = doc_metadata.author
                     if hasattr(author_data, "name"):
@@ -312,18 +300,15 @@ class GleanSearchRetriever(BaseRetriever):
                     if hasattr(author_data, "email"):
                         metadata["author_email"] = author_data.email
 
-                # Handle interactions
                 if hasattr(doc_metadata, "interactions") and doc_metadata.interactions:
                     interactions = doc_metadata.interactions
                     if hasattr(interactions, "shares") and interactions.shares:
                         days_ago = interactions.shares[0].num_days_ago if hasattr(interactions.shares[0], "num_days_ago") else 0
                         metadata["shared_days_ago"] = str(days_ago)
 
-        # Handle clustered results
         if hasattr(result, "clustered_results") and result.clustered_results is not None:
             metadata["clustered_results_count"] = str(len(result.clustered_results))
 
-        # Add debug info if available
         if hasattr(result, "debug_info"):
             metadata["debug_info"] = str(result.debug_info)
 
