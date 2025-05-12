@@ -15,7 +15,7 @@ class TestGleanSearchTool(unittest.TestCase):
 
         load_dotenv(override=True)
 
-        if not os.environ.get("GLEAN_SUBDOMAIN") or not os.environ.get("GLEAN_API_TOKEN"):
+        if not os.environ.get("GLEAN_INSTANCE") or not os.environ.get("GLEAN_API_TOKEN"):
             self.skipTest("Glean credentials not found in environment variables")
 
     @property
