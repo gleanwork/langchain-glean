@@ -79,7 +79,7 @@ class GleanSearchRetriever(BaseRetriever):
             "Based on the provided context, sales increased by 15% in Q2."
     """
 
-    subdomain: str = Field(description="Subdomain for Glean instance")
+    instance: str = Field(description="Instance for Glean")
     api_token: str = Field(description="API token for Glean")
     act_as: Optional[str] = Field(
         default=None, description="Email for the user to act as. Required only when using a global token, not needed for user tokens."
@@ -101,7 +101,7 @@ class GleanSearchRetriever(BaseRetriever):
             ValueError: If api key or subdomain are not found in environment.
         """
         values = values or {}
-        values["subdomain"] = get_from_dict_or_env(values, "subdomain", "GLEAN_SUBDOMAIN")
+        values["instance"] = get_from_dict_or_env(values, "instance", "GLEAN_INSTANCE")
         values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
         values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
 
@@ -117,7 +117,7 @@ class GleanSearchRetriever(BaseRetriever):
         try:
             g = Glean(
                 api_token=self.api_token,
-                domain=self.subdomain,
+                instance=self.instance,
             )
             self._client = g.client
         except Exception as e:

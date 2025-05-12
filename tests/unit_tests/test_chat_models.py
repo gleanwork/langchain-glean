@@ -62,7 +62,7 @@ class TestChatGlean:
     def setup_method(self):
         """Set up the test."""
         # Set environment variables for testing
-        os.environ["GLEAN_SUBDOMAIN"] = "test-subdomain"
+        os.environ["GLEAN_INSTANCE"] = "test-instance"
         os.environ["GLEAN_API_TOKEN"] = "test-api-token"
 
         # Mock the Glean class
@@ -105,7 +105,7 @@ class TestChatGlean:
         self.field_patcher.stop()
 
         # Clean up environment variables after tests
-        for var in ["GLEAN_SUBDOMAIN", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
+        for var in ["GLEAN_INSTANCE", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
             os.environ.pop(var, None)
 
     def test_initialization(self):
@@ -115,7 +115,7 @@ class TestChatGlean:
 
         self.mock_glean.assert_called_once_with(
             api_token="test-api-token",
-            domain="test-subdomain",
+            instance="test-instance",
         )
 
     def test_convert_message_to_glean_format(self):

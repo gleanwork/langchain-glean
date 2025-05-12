@@ -14,7 +14,7 @@ class TestGleanSearchRetriever:
     def setup_method(self):
         """Set up the test."""
         # Set environment variables for testing
-        os.environ["GLEAN_SUBDOMAIN"] = "test-glean"
+        os.environ["GLEAN_INSTANCE"] = "test-glean"
         os.environ["GLEAN_API_TOKEN"] = "test-token"
         os.environ["GLEAN_ACT_AS"] = "test@example.com"
 
@@ -77,23 +77,23 @@ class TestGleanSearchRetriever:
         self.mock_glean_patcher.stop()
 
         # Clean up environment variables after tests
-        for var in ["GLEAN_SUBDOMAIN", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
+        for var in ["GLEAN_INSTANCE", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
             os.environ.pop(var, None)
 
     def test_init(self) -> None:
         """Test the initialization of the retriever."""
-        assert self.retriever.subdomain == "test-glean"
+        assert self.retriever.instance == "test-glean"
         assert self.retriever.api_token == "test-token"
         assert self.retriever.act_as == "test@example.com"
 
         self.mock_glean.assert_called_once_with(
             api_token="test-token",
-            domain="test-glean",
+            instance="test-glean",
         )
 
     def test_init_with_missing_env_vars(self) -> None:
         """Test initialization with missing environment variables."""
-        del os.environ["GLEAN_SUBDOMAIN"]
+        del os.environ["GLEAN_INSTANCE"]
         del os.environ["GLEAN_API_TOKEN"]
 
         with pytest.raises(ValueError):

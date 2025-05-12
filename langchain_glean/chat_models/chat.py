@@ -106,7 +106,7 @@ class ChatGlean(BaseChatModel):
             print(response.content)
     """
 
-    subdomain: str = Field(description="Subdomain for Glean instance")
+    instance: str = Field(description="Instance for Glean")
     api_token: str = Field(description="API token for Glean")
     act_as: Optional[str] = Field(
         default=None, description="Email for the user to act as. Required only when using a global token, not needed for user tokens."
@@ -149,7 +149,7 @@ class ChatGlean(BaseChatModel):
             ValueError: If api key or subdomain are not found in environment.
         """
         values = values or {}
-        values["subdomain"] = get_from_dict_or_env(values, "subdomain", "GLEAN_SUBDOMAIN")
+        values["instance"] = get_from_dict_or_env(values, "instance", "GLEAN_INSTANCE")
         values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
         values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
 
@@ -164,7 +164,7 @@ class ChatGlean(BaseChatModel):
         super().__init__(**kwargs)
 
         try:
-            g = Glean(api_token=self.api_token, domain=self.subdomain)
+            g = Glean(api_token=self.api_token, instance=self.instance)
             self._client = g.client
         except Exception as e:
             raise ValueError(f"Failed to initialize Glean client: {str(e)}")
