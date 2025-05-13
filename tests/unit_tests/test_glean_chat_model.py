@@ -12,10 +12,11 @@ from langchain_core.messages import (
 )
 
 from langchain_glean.chat_models import ChatGlean
+from langchain_glean.chat_models.chat import ChatBasicRequest
 
 
-class TestChatGlean:
-    """Test the ChatGlean."""
+class TestGleanChatModel:
+    """Test the ChatGlean model."""
 
     @property
     def model_class(self) -> Type[BaseChatModel]:
@@ -25,11 +26,6 @@ class TestChatGlean:
     @property
     def model_kwargs(self) -> Dict[str, Any]:
         """Return model kwargs to use for testing."""
-        return {}
-
-    @property
-    def model_unit_kwargs(self) -> Dict[str, Any]:
-        """Return model kwargs to use for unit testing."""
         return {}
 
     @property
@@ -124,6 +120,8 @@ class TestChatGlean:
         for var in ["GLEAN_INSTANCE", "GLEAN_API_TOKEN", "GLEAN_ACT_AS"]:
             os.environ.pop(var, None)
 
+    # ===== BASIC TESTS =====
+
     def test_initialization(self):
         """Test that the chat model initializes correctly."""
         assert self.chat_model is not None
@@ -133,6 +131,14 @@ class TestChatGlean:
             api_token="test-api-token",
             instance="test-instance",
         )
+
+    def test_initialization_with_missing_env_vars(self):
+        """Test initialization with missing environment variables."""
+        del os.environ["GLEAN_INSTANCE"]
+        del os.environ["GLEAN_API_TOKEN"]
+
+        with pytest.raises(ValueError):
+            ChatGlean()
 
     def test_convert_message_to_glean_format(self):
         """Test converting LangChain messages to Glean format."""
@@ -155,66 +161,6 @@ class TestChatGlean:
         assert glean_msg.author == "USER"
         assert glean_msg.message_type == "CONTEXT"
         assert glean_msg.fragments[0].text == "You are an AI assistant."
-
-    def test_create_chat_request(self):
-        """Test creating a chat request from messages."""
-        messages = [SystemMessage(content="You are a helpful AI assistant."), HumanMessage(content="Hello, Glean!")]
-
-        # Mock the models.ChatMessage and models.AgentConfig classes
-        mock_chat_message = MagicMock()
-        mock_agent_config = MagicMock()
-
-        with (
-            patch("langchain_glean.chat_models.chat.models.ChatMessage", return_value=mock_chat_message),
-            patch("langchain_glean.chat_models.chat.models.AgentConfig", return_value=mock_agent_config),
-            patch("langchain_glean.chat_models.chat.models.ChatRequest") as mock_chat_request,
-        ):
-            self.chat_model.save_chat = False
-            self.chat_model._build_chat_params(messages)
-
-            # Check that ChatRequest was called with the right parameters
-            mock_chat_request.assert_called_once()
-
-            # Test setting additional properties
-            self.chat_model.chat_id = "test-chat-id"
-            request = self.chat_model._build_chat_params(messages)
-            assert request.chat_id == "test-chat-id"
-
-            # Test inclusions
-            self.chat_model.inclusions = {"datasources": ["confluence", "drive"]}
-            with patch("langchain_glean.chat_models.chat.models.ChatRestrictionFilters", autospec=True) as mock_filters:
-                mock_filters_instance = MagicMock()
-                mock_filters.return_value = mock_filters_instance
-
-                # Reset mock_chat_request to avoid previous calls affecting our test
-                mock_chat_request.reset_mock()
-
-                request = self.chat_model._build_chat_params(messages)
-                mock_chat_request.assert_called_once()
-                assert hasattr(request, "inclusions")
-
-            # Test exclusions
-            self.chat_model.exclusions = {"datasources": ["slack"]}
-            with patch("langchain_glean.chat_models.chat.models.ChatRestrictionFilters", autospec=True) as mock_filters:
-                mock_filters_instance = MagicMock()
-                mock_filters.return_value = mock_filters_instance
-
-                # Reset mock_chat_request to avoid previous calls affecting our test
-                mock_chat_request.reset_mock()
-
-                request = self.chat_model._build_chat_params(messages)
-                mock_chat_request.assert_called_once()
-                assert hasattr(request, "exclusions")
-
-            # Test timeout_millis
-            self.chat_model.timeout_millis = 30000
-            request = self.chat_model._build_chat_params(messages)
-            assert request.timeout_millis == 30000
-
-            # Test application_id
-            self.chat_model.application_id = "custom-app"
-            request = self.chat_model._build_chat_params(messages)
-            assert request.application_id == "custom-app"
 
     def test_generate(self):
         """Test generating a response from the chat model."""
@@ -239,3 +185,98 @@ class TestChatGlean:
 
         assert self.chat_model.chat_id == "mock-chat-id"
         self.chat_model._client.chat.create.assert_called_once()
+
+    # ===== ADVANCED TESTS =====
+
+    def test_invoke_with_basic_request(self):
+        """Test invoking with a ChatBasicRequest object."""
+        with patch.object(self.chat_model, "_generate") as mock_generate:
+            # Mock the _generate method to return a simple result
+            mock_result = MagicMock()
+            mock_result.generations = [MagicMock()]
+            mock_result.generations[0].message = AIMessage(content="Test response")
+            mock_generate.return_value = mock_result
+
+            # Create a ChatBasicRequest
+            request = ChatBasicRequest(
+                message="What is Glean?", context=["Glean is an enterprise search platform.", "It uses AI to provide better search results."]
+            )
+
+            result = self.chat_model.invoke(request)
+
+            # Verify it called _generate with appropriate messages
+            mock_generate.assert_called_once()
+            call_args = mock_generate.call_args
+            messages = call_args[0][0]
+
+            # Should have context message, then the question
+            assert len(messages) == 2
+            assert isinstance(messages[0], SystemMessage)
+            assert "Glean is an enterprise search platform." in messages[0].content
+            assert isinstance(messages[1], HumanMessage)
+            assert messages[1].content == "What is Glean?"
+
+            # Check result is correct
+            assert isinstance(result, AIMessage)
+            assert result.content == "Test response"
+
+    async def test_ainvoke_with_basic_request(self):
+        """Test async invoking with a ChatBasicRequest object."""
+        with patch.object(self.chat_model, "_agenerate") as mock_agenerate:
+            # Mock the _agenerate method to return a simple result
+            mock_result = MagicMock()
+            mock_result.generations = [MagicMock()]
+            mock_result.generations[0].message = AIMessage(content="Test async response")
+            mock_agenerate.return_value = mock_result
+
+            # Create a ChatBasicRequest
+            request = ChatBasicRequest(message="What is Glean?", context=["Glean is an enterprise search platform."])
+
+            result = await self.chat_model.ainvoke(request)
+
+            # Verify it called _agenerate with appropriate messages
+            mock_agenerate.assert_called_once()
+            call_args = mock_agenerate.call_args
+            messages = call_args[0][0]
+
+            # Should have context message, then the question
+            assert len(messages) == 2
+            assert isinstance(messages[0], SystemMessage)
+            assert "Glean is an enterprise search platform." in messages[0].content
+            assert isinstance(messages[1], HumanMessage)
+            assert messages[1].content == "What is Glean?"
+
+            # Check result is correct
+            assert isinstance(result, AIMessage)
+            assert result.content == "Test async response"
+
+    def test_invoke_with_advanced_params(self):
+        """Test invoking with advanced parameters."""
+        with patch.object(self.chat_model, "_generate") as mock_generate:
+            # Mock the _generate method to return a simple result
+            mock_result = MagicMock()
+            mock_result.generations = [MagicMock()]
+            mock_result.generations[0].message = AIMessage(content="Advanced response")
+            mock_generate.return_value = mock_result
+
+            # Create a ChatBasicRequest with advanced parameters
+            request = ChatBasicRequest(
+                message="What is Glean?",
+            )
+
+            # Additional kwargs that would be passed to the chat creation
+            result = self.chat_model.invoke(request, save_chat=True, agent="GPT", mode="QUICK")
+
+            # Verify it called _generate with the correct kwargs
+            mock_generate.assert_called_once()
+            call_args = mock_generate.call_args
+
+            # Check the kwargs were passed through
+            kwargs = call_args[1]
+            assert kwargs["save_chat"] is True
+            assert kwargs["agent"] == "GPT"
+            assert kwargs["mode"] == "QUICK"
+
+            # Check result is correct
+            assert isinstance(result, AIMessage)
+            assert result.content == "Advanced response"

@@ -5,6 +5,7 @@ from langchain_core.tools import BaseTool
 from pydantic import Field
 
 from langchain_glean.retrievers import GleanSearchRetriever
+from langchain_glean.retrievers.search import SearchBasicRequest
 
 
 class GleanSearchTool(BaseTool):
@@ -20,7 +21,9 @@ class GleanSearchTool(BaseTool):
     retriever: GleanSearchRetriever = Field(..., description="The GleanSearchRetriever to use for searching")
     return_direct: bool = False
 
-    def _run(self, query: Union[str, Dict[str, Any]]) -> str:
+    args_schema: type = SearchBasicRequest
+
+    def _run(self, query: Union[str, Dict[str, Any], SearchBasicRequest]) -> str:
         """Run the tool.
 
         Args:
@@ -30,10 +33,9 @@ class GleanSearchTool(BaseTool):
             A formatted string with the search results
         """
         try:
-            if isinstance(query, str):
-                docs = self.retriever.invoke(query)
+            if isinstance(query, (str, SearchBasicRequest)):
+                docs = self.retriever.invoke(query)  # type: ignore[arg-type]
             else:
-                # If query is a dict, extract the query string and pass the rest as kwargs
                 query_str = query.pop("query", "")
                 docs = self.retriever.invoke(query_str, **query)
 
@@ -60,7 +62,7 @@ class GleanSearchTool(BaseTool):
         except Exception as e:
             return f"Error running Glean search: {str(e)}"
 
-    async def _arun(self, query: Union[str, Dict[str, Any]]) -> str:
+    async def _arun(self, query: Union[str, Dict[str, Any], SearchBasicRequest]) -> str:
         """Run the tool asynchronously.
 
         Args:
@@ -70,10 +72,9 @@ class GleanSearchTool(BaseTool):
             A formatted string with the search results
         """
         try:
-            if isinstance(query, str):
-                docs = await self.retriever.ainvoke(query)
+            if isinstance(query, (str, SearchBasicRequest)):
+                docs = await self.retriever.ainvoke(query)  # type: ignore[arg-type]
             else:
-                # If query is a dict, extract the query string and pass the rest as kwargs
                 query_str = query.pop("query", "")
                 docs = await self.retriever.ainvoke(query_str, **query)
 

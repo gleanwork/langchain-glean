@@ -1,11 +1,33 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 from glean import Glean, errors, models
 from langchain_core.callbacks import AsyncCallbackManagerForRetrieverRun, CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.utils import get_from_dict_or_env
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+class SearchBasicRequest(BaseModel):
+    """Basic subset of ``SearchRequest`` covering the most common fields."""
+
+    query: str = Field(..., description="The search query string.")
+    data_sources: Optional[List[str]] = Field(
+        default=None,
+        description="Optional list of datasource names to restrict the search (e.g. 'github', 'gdrive').",
+    )
+
+    @field_validator("data_sources", mode="before")
+    @classmethod
+    def _clean_data_sources(cls, v: Optional[Iterable[str]]) -> Optional[List[str]]:  # noqa: D401
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [v]
+        try:
+            return [str(s) for s in v]
+        except Exception:  # noqa: BLE001
+            return None
 
 
 class GleanSearchRetriever(BaseRetriever):
@@ -13,14 +35,14 @@ class GleanSearchRetriever(BaseRetriever):
 
     Setup:
         Install ``langchain-glean`` and set environment variables
-        ``GLEAN_API_TOKEN`` and ``GLEAN_SUBDOMAIN``. Optionally set ``GLEAN_ACT_AS``
+        ``GLEAN_API_TOKEN`` and ``GLEAN_INSTANCE``. Optionally set ``GLEAN_ACT_AS``
         if using a global token.
 
         .. code-block:: bash
 
             pip install -U langchain-glean
             export GLEAN_API_TOKEN="your-api-token"  # Can be a global or user token
-            export GLEAN_SUBDOMAIN="your-glean-subdomain"
+            export GLEAN_INSTANCE="your-glean-subdomain"
             export GLEAN_ACT_AS="user@example.com"  # Only required for global tokens
 
     Example:
@@ -89,7 +111,7 @@ class GleanSearchRetriever(BaseRetriever):
     @model_validator(mode="before")
     @classmethod
     def validate_environment(cls, values: Dict) -> Dict:
-        """Validate that api key and subdomain exists in environment.
+        """Validate that the required auth environment variables are present.
 
         Args:
             values: The values to validate.
@@ -98,7 +120,7 @@ class GleanSearchRetriever(BaseRetriever):
             The validated values.
 
         Raises:
-            ValueError: If api key or subdomain are not found in environment.
+            ValueError: If auth credentials are missing from kwargs or environment.
         """
         values = values or {}
         values["instance"] = get_from_dict_or_env(values, "instance", "GLEAN_INSTANCE")
@@ -123,7 +145,13 @@ class GleanSearchRetriever(BaseRetriever):
         except Exception as e:
             raise ValueError(f"Failed to initialize Glean client: {str(e)}")
 
-    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun, **kwargs: Any) -> List[Document]:
+    def _get_relevant_documents(
+        self,
+        query: Union[str, "SearchBasicRequest", models.SearchRequest],
+        *,
+        run_manager: CallbackManagerForRetrieverRun,
+        **kwargs: Any,
+    ) -> List[Document]:
         """Get documents relevant to the query using Glean's search API via the Glean client.
 
         Args:
@@ -164,7 +192,13 @@ class GleanSearchRetriever(BaseRetriever):
             run_manager.on_retriever_error(e)
             return []
 
-    async def _aget_relevant_documents(self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun, **kwargs: Any) -> List[Document]:
+    async def _aget_relevant_documents(
+        self,
+        query: Union[str, "SearchBasicRequest", models.SearchRequest],
+        *,
+        run_manager: AsyncCallbackManagerForRetrieverRun,
+        **kwargs: Any,
+    ) -> List[Document]:
         """Get documents relevant to the query using Glean's search API via the Glean client (async version).
 
         Args:
@@ -205,24 +239,45 @@ class GleanSearchRetriever(BaseRetriever):
             await run_manager.on_retriever_error(e)
             return []
 
-    def _build_search_request(self, query: str, **kwargs: Any) -> models.SearchRequest:
-        """Build a SearchRequest object from query and kwargs.
+    def _build_search_request(self, query: Union[str, "SearchBasicRequest", models.SearchRequest], **kwargs: Any) -> models.SearchRequest:
+        """Build a ``models.SearchRequest`` from either a simple :class:`SearchBasicRequest` *or* the field-by-field kwargs style used today.
+        This keeps backwards compatibility while nudging users (and LLMs) toward the *minimal* input schema.
 
-        Args:
-            query: The query to search for
-            **kwargs: Additional parameters for the search
-
-        Returns:
-            A SearchRequest object for the Glean API
+        If ``query`` is a :class:`SearchBasicRequest` instance we ignore ``kwargs`` – everything is
+        encoded in that object.
         """
-        search_request = models.SearchRequest(query=query)
 
-        if "k" in kwargs:
-            search_request.page_size = max(kwargs.get("k"), kwargs.get("page_size", 100))
+        if isinstance(query, models.SearchRequest):
+            return query
+
+        if isinstance(query, SearchBasicRequest):
+            data = query  # type: SearchBasicRequest
+
+            sr = models.SearchRequest(query=data.query)
+
+            if data.data_sources:
+                sr.request_options = models.SearchRequestOptions(
+                    facet_bucket_size=10,
+                    facet_filters=[
+                        models.FacetFilter(
+                            field_name="datasource",
+                            values=[models.FacetFilterValue(value=ds, relation_type=models.RelationType.EQUALS) for ds in data.data_sources],
+                        )
+                    ],
+                )
+
+            return sr
+
+        search_request = models.SearchRequest(query=query)  # type: ignore[arg-type]
+
+        if "k" in kwargs and kwargs.get("k") is not None:
+            raw_k = kwargs["k"]
+            raw_page_size = kwargs.get("page_size", 10)
+            search_request.page_size = max(int(raw_k), int(raw_page_size))
         elif self.k is not None:
-            search_request.page_size = max(self.k, kwargs.get("page_size", 100))
-        elif "page_size" in kwargs:
-            search_request.page_size = kwargs["page_size"]
+            search_request.page_size = int(self.k)
+        elif "page_size" in kwargs and kwargs["page_size"] is not None:
+            search_request.page_size = int(kwargs["page_size"])
 
         if "max_snippet_size" in kwargs:
             search_request.max_snippet_size = kwargs["max_snippet_size"]
@@ -232,6 +287,9 @@ class GleanSearchRetriever(BaseRetriever):
             search_request.tracking_token = kwargs["tracking_token"]
         if "timeout_millis" in kwargs:
             search_request.timeout_millis = kwargs["timeout_millis"]
+
+        if "request_options" in kwargs:
+            search_request.request_options = kwargs["request_options"]
 
         return search_request
 
