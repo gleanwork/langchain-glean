@@ -1,6 +1,5 @@
 from importlib import metadata
 
-from langchain_glean._client_mixin import GleanAPIClientMixin
 from langchain_glean.chat_models import ChatGlean
 from langchain_glean.retrievers import (
     GleanPeopleProfileRetriever,
@@ -28,6 +27,5 @@ __all__ = [
     "GleanPeopleProfileSearchTool",
     "GleanChatTool",
     "GleanToolkit",
-    "GleanAPIClientMixin",
     "__version__",
 ]

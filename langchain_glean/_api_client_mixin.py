@@ -3,15 +3,13 @@ from typing import Any, Dict, Optional
 from glean import Glean
 from glean.client import Client
 from langchain_core.utils import get_from_dict_or_env
-from pydantic import Field, PrivateAttr, model_post_init, model_validator
+from pydantic import Field, PrivateAttr, model_validator
 
 
 class GleanAPIClientMixin:  # noqa: D401
     """Shared auth + client bootstrap for Glean wrappers.
 
-    Adds three public config fields (``instance``, ``api_token``, ``act_as``) and
-    instantiates :pyclass:`glean.Glean` on model construction.  The resulting
-    client is available via :pyattr:`client`.
+    Exposes a fully-authenticated :pyattr:`client` ready for querying.
     """
 
     instance: str = Field(description="Glean instance/subdomain (e.g. 'acme')")
@@ -21,7 +19,7 @@ class GleanAPIClientMixin:  # noqa: D401
         description="Email to act as when using a global token. Ignored for user tokens.",
     )
 
-    client: Client = PrivateAttr(default=None)
+    client: Client = PrivateAttr()
 
     @model_validator(mode="before")
     @classmethod
@@ -32,10 +30,9 @@ class GleanAPIClientMixin:  # noqa: D401
         values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
         return values
 
-    @model_post_init
-    def _init_client(self, __context: Any) -> None:  # noqa: D401
+    def model_post_init(self, __context: Any) -> None:  # type: ignore[override]  # noqa: D401
         try:
-            g = Glean(api_token=self.api_token, instance=self.instance)
-            self.client = g.client
+            g = Glean(api_token=self.api_token, instance=self.instance)  # type: ignore[call-arg]
+            self.client = g.client  # type: ignore[assignment]
         except Exception as exc:
-            raise ValueError(f"Failed to initialize Glean client: {exc}") from exc 
+            raise ValueError(f"Failed to initialize Glean client: {exc}") from exc

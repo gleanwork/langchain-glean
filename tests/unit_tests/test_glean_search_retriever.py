@@ -20,16 +20,14 @@ class TestGleanSearchRetriever:
         os.environ["GLEAN_API_TOKEN"] = "test-token"
         os.environ["GLEAN_ACT_AS"] = "test@example.com"
 
-        # Mock the Glean class
-        self.mock_glean_patcher = patch("langchain_glean.retrievers.search.Glean")
+        # Mock the Glean class at the mixin level
+        self.mock_glean_patcher = patch("langchain_glean._api_client_mixin.Glean")
         self.mock_glean = self.mock_glean_patcher.start()
-
-        # Mock the client property of the Glean instance
-        mock_client = MagicMock()
-        self.mock_glean.return_value.client = mock_client
 
         # Create mock search client
         mock_search = MagicMock()
+        mock_client = MagicMock()
+        self.mock_glean.return_value.client = mock_client
         mock_client.search = mock_search
 
         # Create mock sample data with SimpleNamespace for better attribute access
@@ -78,7 +76,7 @@ class TestGleanSearchRetriever:
         mock_search.query_async.return_value = mock_results
 
         self.retriever = GleanSearchRetriever()
-        self.retriever._client = mock_client
+        self.retriever.client = mock_client
 
         yield
 
@@ -115,8 +113,8 @@ class TestGleanSearchRetriever:
         docs = self.retriever.invoke("test query")
 
         # Verify the search.query method was called with the correct parameters
-        self.retriever._client.search.query.assert_called_once()
-        call_args = self.retriever._client.search.query.call_args
+        self.retriever.client.search.query.assert_called_once()
+        call_args = self.retriever.client.search.query.call_args
         search_request = call_args[1]["request"]
 
         # Check the SearchRequest object properties
@@ -162,11 +160,11 @@ class TestGleanSearchRetriever:
             assert kwargs["max_snippet_size"] == 100
 
             # Verify that query was called with the mocked search request
-            self.retriever._client.search.query.assert_called_once_with(request=search_request_mock)
+            self.retriever.client.search.query.assert_called_once_with(request=search_request_mock)
 
     def test_build_document(self) -> None:
         """Test the _build_document method."""
-        result = self.retriever._client.search.query.return_value.results[0]
+        result = self.retriever.client.search.query.return_value.results[0]
 
         doc = self.retriever._build_document(result)
 
@@ -200,7 +198,7 @@ class TestGleanSearchRetriever:
         docs = self.retriever.invoke(search_request)
 
         # Verify the search was called with our request object
-        self.retriever._client.search.query.assert_called_once_with(request=search_request)
+        self.retriever.client.search.query.assert_called_once_with(request=search_request)
 
         # Verify we got documents back
         assert len(docs) == 1
@@ -215,8 +213,8 @@ class TestGleanSearchRetriever:
         _ = self.retriever.invoke("test query", page_size=20, request_options=request_options)
 
         # Verify the search call
-        self.retriever._client.search.query.assert_called_once()
-        call_args = self.retriever._client.search.query.call_args
+        self.retriever.client.search.query.assert_called_once()
+        call_args = self.retriever.client.search.query.call_args
         passed_request = call_args[1]["request"]
 
         # Check that the query and options were properly set
@@ -242,8 +240,8 @@ class TestGleanSearchRetriever:
         _ = self.retriever.invoke("test query", request_options=request_options)
 
         # Verify the search call
-        self.retriever._client.search.query.assert_called_once()
-        call_args = self.retriever._client.search.query.call_args
+        self.retriever.client.search.query.assert_called_once()
+        call_args = self.retriever.client.search.query.call_args
         passed_request = call_args[1]["request"]
 
         # Check the request_options has our facet filters
@@ -269,7 +267,7 @@ class TestGleanSearchRetriever:
         async def mock_query_async(*args, **kwargs):
             return mock_async_results
 
-        self.retriever._client.search.query_async = mock_query_async
+        self.retriever.client.search.query_async = mock_query_async
 
         docs = await self.retriever.ainvoke(search_request)
 
@@ -287,8 +285,8 @@ class TestGleanSearchRetriever:
         _ = self.retriever.invoke(search_request, k=5)
 
         # Verify the search call
-        self.retriever._client.search.query.assert_called_once()
-        call_args = self.retriever._client.search.query.call_args
+        self.retriever.client.search.query.assert_called_once()
+        call_args = self.retriever.client.search.query.call_args
 
         # Instead of checking page_size on the passed request (which won't be modified),
         # check if the _build_search_request method was called with the correct k parameter

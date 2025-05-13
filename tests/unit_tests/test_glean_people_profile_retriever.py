@@ -20,16 +20,14 @@ class TestGleanPeopleProfileRetriever:
         os.environ["GLEAN_API_TOKEN"] = "test-token"
         os.environ["GLEAN_ACT_AS"] = "test@example.com"
 
-        # Mock the Glean class
-        self.mock_glean_patcher = patch("langchain_glean.retrievers.people.Glean")
+        # Mock the Glean class at the mixin level
+        self.mock_glean_patcher = patch("langchain_glean._api_client_mixin.Glean")
         self.mock_glean = self.mock_glean_patcher.start()
-
-        # Mock the client property of the Glean instance
-        mock_client = MagicMock()
-        self.mock_glean.return_value.client = mock_client
 
         # Create mock entities client
         mock_entities = MagicMock()
+        mock_client = MagicMock()
+        self.mock_glean.return_value.client = mock_client
         mock_client.entities = mock_entities
 
         # Create mock sample data
@@ -75,7 +73,7 @@ class TestGleanPeopleProfileRetriever:
 
         # Initialize the retriever
         self.retriever = GleanPeopleProfileRetriever()
-        self.retriever._client = mock_client
+        self.retriever.client = mock_client
 
         yield
 
@@ -116,8 +114,8 @@ class TestGleanPeopleProfileRetriever:
         docs = self.retriever.invoke("software engineer")
 
         # Verify the entities.list method was called with the correct parameters
-        self.retriever._client.entities.list.assert_called_once()
-        call_args = self.retriever._client.entities.list.call_args
+        self.retriever.client.entities.list.assert_called_once()
+        call_args = self.retriever.client.entities.list.call_args
         entities_request = call_args[1]["request"]
 
         # Check the ListEntitiesRequest object properties
@@ -148,8 +146,8 @@ class TestGleanPeopleProfileRetriever:
         _ = self.retriever.invoke(request)
 
         # Verify the entities.list method was called with the correct parameters
-        self.retriever._client.entities.list.assert_called_once()
-        call_args = self.retriever._client.entities.list.call_args
+        self.retriever.client.entities.list.assert_called_once()
+        call_args = self.retriever.client.entities.list.call_args
         entities_request = call_args[1]["request"]
 
         # Check the ListEntitiesRequest object properties
@@ -173,8 +171,8 @@ class TestGleanPeopleProfileRetriever:
         _ = self.retriever.invoke(request)
 
         # Verify the entities.list method was called with the correct parameters
-        self.retriever._client.entities.list.assert_called_once()
-        call_args = self.retriever._client.entities.list.call_args
+        self.retriever.client.entities.list.assert_called_once()
+        call_args = self.retriever.client.entities.list.call_args
         entities_request = call_args[1]["request"]
 
         # Check the ListEntitiesRequest object properties
@@ -205,7 +203,7 @@ class TestGleanPeopleProfileRetriever:
         docs = self.retriever.invoke(entities_request)
 
         # Verify the entities.list method was called with the entities_request object
-        self.retriever._client.entities.list.assert_called_once_with(request=entities_request)
+        self.retriever.client.entities.list.assert_called_once_with(request=entities_request)
 
         # Check the documents returned
         assert len(docs) == 2
@@ -215,8 +213,8 @@ class TestGleanPeopleProfileRetriever:
         docs = await self.retriever.ainvoke("software engineer")
 
         # Verify the entities.list_async method was called with the correct parameters
-        self.retriever._client.entities.list_async.assert_called_once()
-        call_args = self.retriever._client.entities.list_async.call_args
+        self.retriever.client.entities.list_async.assert_called_once()
+        call_args = self.retriever.client.entities.list_async.call_args
         entities_request = call_args[1]["request"]
 
         # Check the ListEntitiesRequest object properties
@@ -248,8 +246,8 @@ class TestGleanPeopleProfileRetriever:
         from glean.errors import GleanError
 
         # Make the mock raise a GleanError
-        self.retriever._client.entities.list.side_effect = GleanError("Test error")
+        self.retriever.client.entities.list.side_effect = GleanError("Test error")
 
-        # The retriever should catch the exception and raise a ValueError
+        # The retriever should surface a ValueError on client errors
         with pytest.raises(ValueError, match="Glean client error: Test error"):
             self.retriever.invoke("software engineer")

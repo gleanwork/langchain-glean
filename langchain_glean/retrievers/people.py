@@ -1,7 +1,9 @@
 from __future__ import annotations
+# ruff: noqa: I001
 
 from typing import Any, Dict, List, Optional, Union
 
+from glean import Glean  # noqa: F401
 from glean import errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
@@ -11,7 +13,7 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from pydantic import BaseModel, Field, model_validator
 
-from langchain_glean._client_mixin import GleanAPIClientMixin
+from langchain_glean._api_client_mixin import GleanAPIClientMixin
 
 
 class PeopleProfileBasicRequest(BaseModel):

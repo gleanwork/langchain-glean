@@ -1,7 +1,10 @@
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union, cast
 
-from glean import errors, models
-from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
+from glean import Glean, errors, models  # noqa: F401
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForLLMRun,
+    CallbackManagerForLLMRun,
+)
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
@@ -14,7 +17,7 @@ from langchain_core.messages import (
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from langchain_glean._client_mixin import GleanAPIClientMixin
+from langchain_glean._api_client_mixin import GleanAPIClientMixin
 
 
 class ChatBasicRequest(BaseModel):
