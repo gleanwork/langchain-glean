@@ -29,14 +29,13 @@ class TestGleanSearchRetriever(unittest.TestCase):
     @property
     def retriever_constructor_params(self) -> dict:
         """Get the parameters for the retriever constructor."""
-        return {}  # No params needed as we use environment variables
+        return {}
 
     @property
     def retriever_query_example(self) -> str:
         """Returns an example query for the retriever."""
         return "What can Glean's assistant do?"
 
-    # ===== BASIC TESTS =====
 
     def test_invoke_returns_documents(self) -> None:
         """Test that invoke returns documents."""
@@ -69,9 +68,7 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
     def test_k_constructor_param(self) -> None:
         """Test that k constructor param works."""
-        # First check if the retriever accepts k as a parameter
         try:
-            # Use k parameter for GleanSearchRetriever
             retriever = self.retriever_constructor(k=1, **self.retriever_constructor_params)
             docs = retriever.invoke(self.retriever_query_example)
             self.assertIsInstance(docs, List)
@@ -83,11 +80,8 @@ class TestGleanSearchRetriever(unittest.TestCase):
             else:
                 raise
 
-    # ===== ADVANCED TESTS =====
-
     def test_native_search_request(self) -> None:
         """Test with a fully configured native SearchRequest object."""
-        # Create a Glean native SearchRequest with all parameters
         search_request = SearchRequest(
             query="search api",
             page_size=5,
@@ -96,14 +90,11 @@ class TestGleanSearchRetriever(unittest.TestCase):
             request_options=SearchRequestOptions(response_hints=["RESULTS", "FACET_RESULTS", "SPELLCHECK_METADATA"], facet_bucket_size=30),
         )
 
-        # Use the retriever with the native request
         retriever = GleanSearchRetriever()
         docs = retriever.invoke(search_request)
 
-        # Verify we get results
         self.assertIsInstance(docs, List)
 
-        # If search returned results, verify document structure
         if docs:
             self.assertIsInstance(docs[0], Document)
             self.assertTrue(docs[0].page_content)
@@ -114,50 +105,36 @@ class TestGleanSearchRetriever(unittest.TestCase):
 
     def test_invoke_with_facet_filters(self) -> None:
         """Test with strongly typed facet filters."""
-        # Create the facet filters using Glean's native models
         facet_filters = [FacetFilter(field_name="datasource", values=[FacetFilterValue(value="confluence", relation_type=RelationType.EQUALS)])]
 
-        # Create the request options
         request_options = SearchRequestOptions(facet_filters=facet_filters, facet_bucket_size=10)
 
-        # Use the retriever
         retriever = GleanSearchRetriever()
         docs = retriever.invoke("documentation", request_options=request_options)
 
-        # Verify we get results
         self.assertIsInstance(docs, List)
 
-        # If search returned results, verify the datasource is as expected
         if docs:
             self.assertIsInstance(docs[0], Document)
-            # All documents should be from confluence
             for doc in docs:
                 self.assertEqual(doc.metadata.get("datasource"), "confluence")
 
     def test_combined_filters_and_parameters(self) -> None:
         """Test combining multiple filter types and parameters."""
-        # Create facet filters for datasource
         datasource_filter = FacetFilter(field_name="datasource", values=[FacetFilterValue(value="slack", relation_type=RelationType.EQUALS)])
 
-        # Create date filter
-        # Note: Adjust the date if needed to find recent messages
         date_filter = FacetFilter(field_name="create_time", values=[FacetFilterValue(value="2023-01-01", relation_type=RelationType.GT)])
 
-        # Combine filters with SearchRequestOptions
         request_options = SearchRequestOptions(facet_filters=[datasource_filter, date_filter], facet_bucket_size=20, fetch_all_datasource_counts=True)
 
-        # Use the retriever
         retriever = GleanSearchRetriever()
         docs = retriever.invoke("message", page_size=10, request_options=request_options)
 
-        # Verify we get results
         self.assertIsInstance(docs, List)
 
-        # If search returned results, check metadata
         if docs:
             for doc in docs:
                 self.assertEqual(doc.metadata.get("datasource"), "slack")
-                # Create time should be after 2023-01-01
                 self.assertGreater(doc.metadata.get("create_time", "2023-01-01"), "2023-01-01")
 
     async def test_async_native_search_request(self) -> None:
@@ -165,19 +142,15 @@ class TestGleanSearchRetriever(unittest.TestCase):
         import asyncio
 
         async def _test():
-            # Create a Glean native SearchRequest
             search_request = SearchRequest(
                 query="search api", page_size=5, disable_spellcheck=True, request_options=SearchRequestOptions(response_hints=["RESULTS"])
             )
 
-            # Use the retriever with the native request
             retriever = GleanSearchRetriever()
             docs = await retriever.ainvoke(search_request)
 
-            # Verify we get results
             self.assertIsInstance(docs, List)
 
-            # If search returned results, verify document structure
             if docs:
                 self.assertIsInstance(docs[0], Document)
                 self.assertTrue(docs[0].page_content)

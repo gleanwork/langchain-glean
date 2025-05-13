@@ -57,8 +57,6 @@ class TestGleanChatModelIntegration(unittest.TestCase):
             HumanMessage(content="Can you elaborate on the AI assistant capabilities?"),
         ]
 
-    # ===== BASIC TESTS =====
-
     def test_invoke_with_basic_messages(self) -> None:
         """Test invoking with basic messages."""
         chat = self.model_class(**self.model_params)
@@ -83,7 +81,6 @@ class TestGleanChatModelIntegration(unittest.TestCase):
         self.assertIsInstance(response, AIMessage)
         self.assertTrue(len(response.content) > 0)
 
-    # ===== STREAMING TESTS =====
 
     def test_stream(self) -> None:
         """Test streaming responses."""
@@ -94,20 +91,15 @@ class TestGleanChatModelIntegration(unittest.TestCase):
             self.assertIsInstance(chunk, AIMessage)
             response_chunks.append(chunk.content)
 
-        # Ensure we received some chunks
         self.assertTrue(len(response_chunks) > 0)
 
-        # Combine chunks to make sure we have a meaningful response
         full_response = "".join(response_chunks)
         self.assertTrue(len(full_response) > 0)
-
-    # ===== BASIC REQUEST TESTS =====
 
     def test_invoke_with_basic_request(self) -> None:
         """Test invoking with a ChatBasicRequest."""
         chat = self.model_class(**self.model_params)
 
-        # Basic request with just a message
         request = ChatBasicRequest(message="What can Glean's assistant do?")
 
         response = chat.invoke(request)
@@ -119,7 +111,6 @@ class TestGleanChatModelIntegration(unittest.TestCase):
         """Test invoking with a request that includes context."""
         chat = self.model_class(**self.model_params)
 
-        # Request with context
         request = ChatBasicRequest(
             message="Summarize this information",
             context=["Glean is an enterprise search platform.", "It uses AI to provide better search results.", "It includes tools for knowledge management."],
@@ -130,16 +121,12 @@ class TestGleanChatModelIntegration(unittest.TestCase):
         self.assertIsInstance(response, AIMessage)
         self.assertTrue(len(response.content) > 0)
 
-    # ===== ADVANCED TESTS =====
-
     def test_invoke_with_agent_config(self) -> None:
         """Test invoking with agent configuration."""
         chat = self.model_class(**self.model_params)
 
-        # Basic request with agent config parameters
         request = ChatBasicRequest(message="Give me a short answer to: What is Glean?")
 
-        # Use the GPT agent in QUICK mode
         response = chat.invoke(request, agent="GPT", mode="QUICK")
 
         self.assertIsInstance(response, AIMessage)
@@ -149,7 +136,6 @@ class TestGleanChatModelIntegration(unittest.TestCase):
         """Test async invocation with a basic request."""
         chat = self.model_class(**self.model_params)
 
-        # Basic request
         request = ChatBasicRequest(message="What can Glean's assistant do?")
 
         response = await chat.ainvoke(request)

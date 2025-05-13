@@ -28,7 +28,7 @@ class TestGleanChatTool(unittest.TestCase):
     @property
     def tool_constructor_params(self) -> dict:
         """Get the parameters for the tool constructor."""
-        return {}  # No params needed as we use environment variables
+        return {}
 
     @property
     def basic_message_example(self) -> str:
@@ -45,7 +45,6 @@ class TestGleanChatTool(unittest.TestCase):
     def test_invoke_with_simple_message(self) -> None:
         """Test invoking with a simple message string."""
         tool = self.tool_constructor(**self.tool_constructor_params)
-        # Use a simple string instead of a ChatBasicRequest
         output = tool.invoke(input=self.basic_message_example)
 
         self.assertIsInstance(output, str)
@@ -56,8 +55,6 @@ class TestGleanChatTool(unittest.TestCase):
         tool = self.tool_constructor(**self.tool_constructor_params)
         chat_request = self.basic_request_example
 
-        # Just use a simple string for the message
-        # Since context is not testable in isolation, test with just the message
         output = tool.invoke(input=chat_request.message)
 
         self.assertIsInstance(output, str)
@@ -67,8 +64,6 @@ class TestGleanChatTool(unittest.TestCase):
         """Test invoking with advanced parameters."""
         tool = self.tool_constructor(**self.tool_constructor_params)
 
-        # Just use a simple string for the message
-        # We can't pass additional parameters in integration tests because of BaseTool's design
         output = tool.invoke(input=self.basic_message_example)
 
         self.assertIsInstance(output, str)
@@ -80,7 +75,6 @@ class TestGleanChatTool(unittest.TestCase):
 
         async def _test():
             tool = self.tool_constructor(**self.tool_constructor_params)
-            # Use a simple string
             output = await tool.ainvoke(input=self.basic_message_example)
 
             self.assertIsInstance(output, str)
@@ -96,8 +90,6 @@ class TestGleanChatTool(unittest.TestCase):
             tool = self.tool_constructor(**self.tool_constructor_params)
             chat_request = self.basic_request_example
 
-            # Just use a simple string for the message
-            # Since context is not testable in isolation, test with just the message
             output = await tool.ainvoke(input=chat_request.message)
 
             self.assertIsInstance(output, str)
@@ -112,8 +104,6 @@ class TestGleanChatTool(unittest.TestCase):
         async def _test():
             tool = self.tool_constructor(**self.tool_constructor_params)
 
-            # Just use a simple string for the message
-            # We can't pass additional parameters in integration tests because of BaseTool's design
             output = await tool.ainvoke(input=self.basic_message_example)
 
             self.assertIsInstance(output, str)

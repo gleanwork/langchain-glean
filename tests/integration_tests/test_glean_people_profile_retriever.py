@@ -29,14 +29,12 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
     @property
     def retriever_constructor_params(self) -> dict:
         """Get the parameters for the retriever constructor."""
-        return {}  # No params needed as we use environment variables
+        return {}
 
     @property
     def retriever_query_example(self) -> str:
         """Returns an example query for the retriever."""
-        return "engineer"  # Simple query to find engineers
-
-    # ===== BASIC TESTS =====
+        return "engineer"
 
     def test_invoke_returns_documents(self) -> None:
         """Test that invoke returns documents."""
@@ -45,7 +43,6 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
         self.assertIsInstance(docs, List)
         if docs:
             self.assertIsInstance(docs[0], Document)
-            # Check that the document has the expected structure
             self.assertTrue(docs[0].page_content)
             self.assertIn("email", docs[0].metadata)
             self.assertIn("title", docs[0].metadata)
@@ -60,7 +57,6 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
             self.assertIsInstance(docs, List)
             if docs:
                 self.assertIsInstance(docs[0], Document)
-                # Check that the document has the expected structure
                 self.assertTrue(docs[0].page_content)
                 self.assertIn("email", docs[0].metadata)
 
@@ -74,8 +70,6 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
         if docs:
             self.assertLessEqual(len(docs), 1)
 
-    # ===== INTERMEDIATE TESTS =====
-
     def test_invoke_with_basic_request(self) -> None:
         """Test invoke with a PeopleProfileBasicRequest."""
         retriever = self.retriever_constructor(**self.retriever_constructor_params)
@@ -85,35 +79,30 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
         docs = retriever.invoke(request)
 
         self.assertIsInstance(docs, List)
+        
         if docs:
             self.assertIsInstance(docs[0], Document)
-            # Check that we respect the page_size
             self.assertLessEqual(len(docs), 2)
 
     def test_invoke_with_filters(self) -> None:
         """Test invoke with filters."""
         retriever = self.retriever_constructor(**self.retriever_constructor_params)
 
-        # Use department filter - this should work in most Glean instances
-        # Adjust the department value as needed for your specific Glean instance
         request = PeopleProfileBasicRequest(filters={"department": "Engineering"}, page_size=5)
 
         docs = retriever.invoke(request)
 
         self.assertIsInstance(docs, List)
+
         if docs:
             self.assertIsInstance(docs[0], Document)
-            # Check that the documents have the expected department
             for doc in docs:
                 self.assertEqual(doc.metadata.get("department"), "Engineering")
-
-    # ===== ADVANCED TESTS =====
 
     def test_invoke_with_native_request(self) -> None:
         """Test invoke with a native ListEntitiesRequest."""
         retriever = self.retriever_constructor(**self.retriever_constructor_params)
 
-        # Create a native Glean API request
         entities_request = ListEntitiesRequest(
             entity_type="PEOPLE",
             query="manager",
@@ -124,9 +113,9 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
         docs = retriever.invoke(entities_request)
 
         self.assertIsInstance(docs, List)
+
         if docs:
             self.assertIsInstance(docs[0], Document)
-            # Title should contain "Manager" (case-insensitive)
             for doc in docs:
                 self.assertIn("Manager", doc.metadata.get("title", ""), f"Title '{doc.metadata.get('title')}' doesn't contain 'Manager'")
 
@@ -134,14 +123,11 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
         """Test with multiple filters."""
         retriever = self.retriever_constructor(**self.retriever_constructor_params)
 
-        # Create a request with multiple filters
         entities_request = ListEntitiesRequest(
             entity_type="PEOPLE",
             page_size=5,
             filter=[
-                # Filter by department
                 FacetFilter(field_name="department", values=[FacetFilterValue(value="Engineering", relation_type=RelationType.EQUALS)]),
-                # Filter by title containing "Senior"
                 FacetFilter(field_name="title", values=[FacetFilterValue(value="Senior", relation_type=RelationType.EQUALS)]),
             ],
         )
@@ -149,7 +135,7 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
         docs = retriever.invoke(entities_request)
 
         self.assertIsInstance(docs, List)
-        # If we get results, check they match our filters
+
         if docs:
             for doc in docs:
                 self.assertEqual(doc.metadata.get("department"), "Engineering")

@@ -34,7 +34,7 @@ class TestGleanPeopleProfileSearchTool(unittest.TestCase):
     @property
     def string_query_example(self) -> str:
         """Returns an example query string for the tool."""
-        return "engineer"  # Simple query to find engineers
+        return "engineer" 
 
     @property
     def typed_request_example(self) -> PeopleProfileBasicRequest:
@@ -44,17 +44,16 @@ class TestGleanPeopleProfileSearchTool(unittest.TestCase):
     @property
     def filtered_request_example(self) -> PeopleProfileBasicRequest:
         """Returns a request with filters example."""
-        # Note: Adjust these filters based on what would work in your Glean instance
+
         return PeopleProfileBasicRequest(filters={"department": "Engineering"}, page_size=5)
 
     def test_invoke_with_string_query(self) -> None:
         """Test invoking with a string query."""
         tool = self.tool_constructor(**self.tool_constructor_params)
-        # Use a simple string instead of a PeopleProfileBasicRequest
+
         output = tool.invoke(input=self.string_query_example)
 
         self.assertIsInstance(output, str)
-        # The output should either contain results or say no results found
         self.assertTrue(len(output) > 0 and (output != "No matching people found." or "- " in output))
 
     def test_invoke_with_typed_request(self) -> None:
@@ -62,7 +61,6 @@ class TestGleanPeopleProfileSearchTool(unittest.TestCase):
         tool = self.tool_constructor(**self.tool_constructor_params)
         request = self.typed_request_example
 
-        # Just use the query as a string
         output = tool.invoke(input=request.query)
 
         self.assertIsInstance(output, str)
@@ -71,8 +69,6 @@ class TestGleanPeopleProfileSearchTool(unittest.TestCase):
     def test_invoke_with_filters(self) -> None:
         """Test invoking with filters."""
         tool = self.tool_constructor(**self.tool_constructor_params)
-        # We can't properly test with filters in integration tests due to BaseTool limitations
-        # So just use a simple string query
         output = tool.invoke(input="software engineer in engineering")
 
         self.assertIsInstance(output, str)
@@ -84,7 +80,6 @@ class TestGleanPeopleProfileSearchTool(unittest.TestCase):
 
         async def _test():
             tool = self.tool_constructor(**self.tool_constructor_params)
-            # Use a simple string
             output = await tool.ainvoke(input=self.string_query_example)
 
             self.assertIsInstance(output, str)
@@ -100,7 +95,6 @@ class TestGleanPeopleProfileSearchTool(unittest.TestCase):
             tool = self.tool_constructor(**self.tool_constructor_params)
             request = self.typed_request_example
 
-            # Just use the query as a string
             output = await tool.ainvoke(input=request.query)
 
             self.assertIsInstance(output, str)
@@ -114,8 +108,6 @@ class TestGleanPeopleProfileSearchTool(unittest.TestCase):
 
         async def _test():
             tool = self.tool_constructor(**self.tool_constructor_params)
-            # We can't properly test with filters in integration tests due to BaseTool limitations
-            # So just use a simple string query
             output = await tool.ainvoke(input="software engineer in engineering")
 
             self.assertIsInstance(output, str)
