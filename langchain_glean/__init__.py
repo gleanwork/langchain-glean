@@ -2,6 +2,7 @@ from importlib import metadata
 
 from langchain_glean.chat_models import ChatGlean
 from langchain_glean.retrievers import GleanPeopleProfileRetriever, GleanSearchRetriever
+from langchain_glean.toolkit import GleanToolkit
 from langchain_glean.tools import GleanChatTool, GleanPeopleProfileSearchTool, GleanSearchTool
 
 try:
@@ -18,5 +19,6 @@ __all__ = [
     "GleanSearchTool",
     "GleanPeopleProfileSearchTool",
     "GleanChatTool",
+    "GleanToolkit",
     "__version__",
 ]
