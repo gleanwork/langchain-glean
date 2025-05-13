@@ -1,9 +1,17 @@
 from importlib import metadata
 
+from langchain_glean._client_mixin import GleanAPIClientMixin
 from langchain_glean.chat_models import ChatGlean
-from langchain_glean.retrievers import GleanPeopleProfileRetriever, GleanSearchRetriever
+from langchain_glean.retrievers import (
+    GleanPeopleProfileRetriever,
+    GleanSearchRetriever,
+)
 from langchain_glean.toolkit import GleanToolkit
-from langchain_glean.tools import GleanChatTool, GleanPeopleProfileSearchTool, GleanSearchTool
+from langchain_glean.tools import (
+    GleanChatTool,
+    GleanPeopleProfileSearchTool,
+    GleanSearchTool,
+)
 
 try:
     __version__ = metadata.version(__package__)
@@ -20,5 +28,6 @@ __all__ = [
     "GleanPeopleProfileSearchTool",
     "GleanChatTool",
     "GleanToolkit",
+    "GleanAPIClientMixin",
     "__version__",
 ]

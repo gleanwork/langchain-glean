@@ -1,11 +1,12 @@
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Iterable, List, Optional, Union
 
-from glean import Glean, errors, models
+from glean import errors, models
 from langchain_core.callbacks import AsyncCallbackManagerForRetrieverRun, CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.utils import get_from_dict_or_env
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
+
+from langchain_glean._client_mixin import GleanAPIClientMixin
 
 
 class SearchBasicRequest(BaseModel):
@@ -30,7 +31,7 @@ class SearchBasicRequest(BaseModel):
             return None
 
 
-class GleanSearchRetriever(BaseRetriever):
+class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
     """Retriever that uses Glean's search API via the Glean client.
 
     Setup:
@@ -101,49 +102,7 @@ class GleanSearchRetriever(BaseRetriever):
             "Based on the provided context, sales increased by 15% in Q2."
     """
 
-    instance: str = Field(description="Instance for Glean")
-    api_token: str = Field(description="API token for Glean")
-    act_as: Optional[str] = Field(
-        default=None, description="Email for the user to act as. Required only when using a global token, not needed for user tokens."
-    )
     k: Optional[int] = Field(default=None, description="Number of results to return. Maps to page_size in the Glean API.")
-
-    @model_validator(mode="before")
-    @classmethod
-    def validate_environment(cls, values: Dict) -> Dict:
-        """Validate that the required auth environment variables are present.
-
-        Args:
-            values: The values to validate.
-
-        Returns:
-            The validated values.
-
-        Raises:
-            ValueError: If auth credentials are missing from kwargs or environment.
-        """
-        values = values or {}
-        values["instance"] = get_from_dict_or_env(values, "instance", "GLEAN_INSTANCE")
-        values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
-        values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
-
-        return values
-
-    def __init__(self) -> None:
-        """Initialize the retriever.
-
-        All required values are pulled from environment variables during model validation.
-        """
-        super().__init__()
-
-        try:
-            g = Glean(
-                api_token=self.api_token,
-                instance=self.instance,
-            )
-            self._client = g.client
-        except Exception as e:
-            raise ValueError(f"Failed to initialize Glean client: {str(e)}")
 
     def _get_relevant_documents(
         self,
@@ -166,7 +125,7 @@ class GleanSearchRetriever(BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                response = self._client.search.query(request=search_request)
+                response = self.client.search.query(request=search_request)
 
             except errors.GleanError as client_err:
                 run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
@@ -213,7 +172,7 @@ class GleanSearchRetriever(BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                response = await self._client.search.query_async(request=search_request)
+                response = await self.client.search.query_async(request=search_request)
 
             except errors.GleanError as client_err:
                 await run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))

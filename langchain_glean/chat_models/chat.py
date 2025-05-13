@@ -1,6 +1,6 @@
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union, cast
 
-from glean import Glean, errors, models
+from glean import errors, models
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
@@ -12,8 +12,9 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
-from langchain_core.utils import get_from_dict_or_env
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+
+from langchain_glean._client_mixin import GleanAPIClientMixin
 
 
 class ChatBasicRequest(BaseModel):
@@ -26,7 +27,7 @@ class ChatBasicRequest(BaseModel):
     )
 
 
-class ChatGlean(BaseChatModel):
+class ChatGlean(GleanAPIClientMixin, BaseChatModel):
     """`Glean` Chat model wrapper.
 
     Setup
@@ -81,47 +82,8 @@ class ChatGlean(BaseChatModel):
         print(response.content)
     """
 
-    instance: str = Field(description="Instance for Glean")
-    api_token: str = Field(description="API token for Glean")
-    act_as: Optional[str] = Field(
-        default=None, description="Email for the user to act as. Required only when using a global token, not needed for user tokens."
-    )
     _chat_id: Optional[str] = PrivateAttr(default=None)
     model_config = ConfigDict(extra="allow")
-
-    @model_validator(mode="before")
-    def validate_environment(cls, values: Dict) -> Dict:
-        """Validate that the required auth environment variables are present.
-
-        Args:
-            values: The values to validate.
-
-        Returns:
-            The validated values.
-
-        Raises:
-            ValueError: If api key or subdomain are not found in environment.
-        """
-        values = values or {}
-        values["instance"] = get_from_dict_or_env(values, "instance", "GLEAN_INSTANCE")
-        values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
-        values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
-
-        return values
-
-    def __init__(self, **kwargs: Any) -> None:
-        """Initialize the chat model.
-
-        Args:
-            **kwargs: Keyword arguments to pass to the parent class.
-        """
-        super().__init__(**kwargs)
-
-        try:
-            g = Glean(api_token=self.api_token, instance=self.instance)
-            self._client = g.client
-        except Exception as e:
-            raise ValueError(f"Failed to initialize Glean client: {str(e)}")
 
     @property
     def chat_id(self) -> Optional[str]:  # noqa: D401
@@ -305,7 +267,7 @@ class ChatGlean(BaseChatModel):
             params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
-            response = self._client.chat.create(
+            response = self.client.chat.create(
                 messages=params.messages,
                 save_chat=params.save_chat,
                 chat_id=params.chat_id if hasattr(params, "chat_id") else None,
@@ -382,7 +344,7 @@ class ChatGlean(BaseChatModel):
             params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
-            response = await self._client.chat.create_async(
+            response = await self.client.chat.create_async(
                 messages=params.messages,
                 save_chat=params.save_chat,
                 chat_id=params.chat_id if hasattr(params, "chat_id") else None,
@@ -460,7 +422,7 @@ class ChatGlean(BaseChatModel):
         params.stream = True
 
         try:
-            response_stream = self._client.chat.create_stream(
+            response_stream = self.client.chat.create_stream(
                 messages=params.messages,
                 save_chat=params.save_chat,
                 chat_id=params.chat_id if hasattr(params, "chat_id") else None,
@@ -551,7 +513,7 @@ class ChatGlean(BaseChatModel):
         params.stream = True
 
         try:
-            response_stream = await self._client.chat.create_stream_async(
+            response_stream = await self.client.chat.create_stream_async(
                 messages=params.messages,
                 save_chat=params.save_chat,
                 chat_id=params.chat_id if hasattr(params, "chat_id") else None,

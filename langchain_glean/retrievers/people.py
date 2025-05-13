@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
 
-from glean import Glean, errors, models
+from glean import errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
 )
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.utils import get_from_dict_or_env
 from pydantic import BaseModel, Field, model_validator
+
+from langchain_glean._client_mixin import GleanAPIClientMixin
 
 
 class PeopleProfileBasicRequest(BaseModel):
@@ -47,7 +48,7 @@ class PeopleProfileBasicRequest(BaseModel):
         return values
 
 
-class GleanPeopleProfileRetriever(BaseRetriever):
+class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
     """Retriever that queries Glean's people directory and returns LangChain Documents.
 
     Setup:
@@ -114,42 +115,7 @@ class GleanPeopleProfileRetriever(BaseRetriever):
             chain.invoke("engineering manager")
     """
 
-    instance: str = Field(description="Glean instance/subdomain (e.g. 'acme')")
-    api_token: str = Field(description="Glean API token (user or global)")
-    act_as: Optional[str] = Field(
-        default=None,
-        description="Email to act as when using a global token. Ignored for user tokens.",
-    )
     k: Optional[int] = Field(default=10, description="Number of results to return per invocation.")
-
-    @model_validator(mode="before")
-    @classmethod
-    def validate_environment(cls, values: Dict) -> Dict:
-        """Validate that the required auth environment variables are present.
-
-        Args:
-            values: The values to validate.
-
-        Returns:
-            The validated values.
-
-        Raises:
-            ValueError: If auth credentials are missing from kwargs or environment.
-        """
-        values = values or {}
-        values["instance"] = get_from_dict_or_env(values, "instance", "GLEAN_INSTANCE")
-        values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
-        values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
-
-        return values
-
-    def __init__(self, **kwargs: Any) -> None:  # noqa: D401
-        super().__init__(**kwargs)
-        try:
-            g = Glean(api_token=self.api_token, instance=self.instance)
-            self._client = g.client
-        except Exception as e:  # noqa: BLE001
-            raise ValueError(f"Failed to initialize Glean client: {e}") from e
 
     def _get_relevant_documents(
         self,
@@ -160,7 +126,7 @@ class GleanPeopleProfileRetriever(BaseRetriever):
     ) -> List[Document]:
         try:
             entities_req = self._build_entities_request(query, **kwargs)
-            response = self._client.entities.list(request=entities_req)
+            response = self.client.entities.list(request=entities_req)
         except errors.GleanError as err:
             raise ValueError(f"Glean client error: {err}") from err
         except Exception:
@@ -193,7 +159,7 @@ class GleanPeopleProfileRetriever(BaseRetriever):
     ) -> List[Document]:
         try:
             entities_req = self._build_entities_request(query, **kwargs)
-            response = await self._client.entities.list_async(request=entities_req)
+            response = await self.client.entities.list_async(request=entities_req)
         except errors.GleanError as err:
             raise ValueError(f"Glean client error: {err}") from err
         except Exception:
