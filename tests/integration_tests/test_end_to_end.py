@@ -4,9 +4,7 @@ from typing import List
 
 from dotenv import load_dotenv
 from langchain_core.documents import Document
-from langchain_core.messages import AIMessage
 
-from langchain_glean.chat_models.chat import ChatBasicRequest
 from langchain_glean.retrievers import GleanSearchRetriever
 from langchain_glean.retrievers.people import GleanPeopleProfileRetriever, PeopleProfileBasicRequest
 from langchain_glean.tools.chat import GleanChatTool

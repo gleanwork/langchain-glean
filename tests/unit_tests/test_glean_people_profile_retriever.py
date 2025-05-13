@@ -145,7 +145,7 @@ class TestGleanPeopleProfileRetriever:
             page_size=5,
         )
 
-        docs = self.retriever.invoke(request)
+        _ = self.retriever.invoke(request)
 
         # Verify the entities.list method was called with the correct parameters
         self.retriever._client.entities.list.assert_called_once()
@@ -170,7 +170,7 @@ class TestGleanPeopleProfileRetriever:
             page_size=5,
         )
 
-        docs = self.retriever.invoke(request)
+        _ = self.retriever.invoke(request)
 
         # Verify the entities.list method was called with the correct parameters
         self.retriever._client.entities.list.assert_called_once()

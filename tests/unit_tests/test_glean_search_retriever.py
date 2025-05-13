@@ -1,6 +1,5 @@
 import os
 from types import SimpleNamespace
-from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -213,7 +212,7 @@ class TestGleanSearchRetriever:
         # Create just the options part
         request_options = SearchRequestOptions(datasources_filter=["confluence", "drive"], fetch_all_datasource_counts=True, facet_bucket_size=30)
 
-        docs = self.retriever.invoke("test query", page_size=20, request_options=request_options)
+        _ = self.retriever.invoke("test query", page_size=20, request_options=request_options)
 
         # Verify the search call
         self.retriever._client.search.query.assert_called_once()
@@ -240,7 +239,7 @@ class TestGleanSearchRetriever:
         # Create a SearchRequestOptions with facet_filters
         request_options = SearchRequestOptions(facet_filters=facet_filters, facet_bucket_size=20)
 
-        docs = self.retriever.invoke("test query", request_options=request_options)
+        _ = self.retriever.invoke("test query", request_options=request_options)
 
         # Verify the search call
         self.retriever._client.search.query.assert_called_once()
@@ -285,7 +284,7 @@ class TestGleanSearchRetriever:
         search_request = SearchRequest(query="test query", request_options=SearchRequestOptions(datasources_filter=["confluence"], facet_bucket_size=20))
 
         # Call with k parameter
-        docs = self.retriever.invoke(search_request, k=5)
+        _ = self.retriever.invoke(search_request, k=5)
 
         # Verify the search call
         self.retriever._client.search.query.assert_called_once()
