@@ -79,7 +79,7 @@ class TestGleanPeopleProfileRetriever(unittest.TestCase):
         docs = retriever.invoke(request)
 
         self.assertIsInstance(docs, List)
-        
+
         if docs:
             self.assertIsInstance(docs[0], Document)
             self.assertLessEqual(len(docs), 2)

@@ -34,7 +34,7 @@ class TestGleanPeopleProfileSearchTool(unittest.TestCase):
     @property
     def string_query_example(self) -> str:
         """Returns an example query string for the tool."""
-        return "engineer" 
+        return "engineer"
 
     @property
     def typed_request_example(self) -> PeopleProfileBasicRequest:

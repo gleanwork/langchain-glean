@@ -81,7 +81,6 @@ class TestGleanChatModelIntegration(unittest.TestCase):
         self.assertIsInstance(response, AIMessage)
         self.assertTrue(len(response.content) > 0)
 
-
     def test_stream(self) -> None:
         """Test streaming responses."""
         chat = self.model_class(**self.model_params)

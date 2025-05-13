@@ -36,7 +36,6 @@ class TestGleanSearchRetriever(unittest.TestCase):
         """Returns an example query for the retriever."""
         return "What can Glean's assistant do?"
 
-
     def test_invoke_returns_documents(self) -> None:
         """Test that invoke returns documents."""
         retriever = self.retriever_constructor(**self.retriever_constructor_params)
