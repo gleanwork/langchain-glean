@@ -19,7 +19,7 @@ class TestGleanToolkit:
             tk = GleanToolkit()
             tools = tk.get_tools()
 
-        assert len(tools) == 3
+        assert len(tools) == 6
         assert any(isinstance(t, GleanChatTool) for t in tools)
         assert any(isinstance(t, GleanPeopleProfileSearchTool) for t in tools)
         assert any(isinstance(t, GleanSearchTool) for t in tools)
