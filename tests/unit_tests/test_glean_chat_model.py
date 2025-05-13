@@ -61,8 +61,8 @@ class TestGleanChatModel:
         os.environ["GLEAN_INSTANCE"] = "test-instance"
         os.environ["GLEAN_API_TOKEN"] = "test-api-token"
 
-        # Mock the Glean class
-        self.mock_glean_patcher = patch("langchain_glean.chat_models.chat.Glean")
+        # Mock the Glean class at the mixin level
+        self.mock_glean_patcher = patch("langchain_glean._api_client_mixin.Glean")
         self.mock_glean = self.mock_glean_patcher.start()
 
         # Mock the client property of the Glean instance
@@ -71,6 +71,15 @@ class TestGleanChatModel:
 
         # Create mock chat client
         mock_chat = MagicMock()
+        from types import SimpleNamespace
+
+        # Configure chat.create to mimic expected Glean response structure
+        mock_response = SimpleNamespace(
+            messages=[{"author": "GLEAN_AI", "messageType": "CONTENT", "fragments": [{"text": "mock"}]}],
+            chatId="mock-chat-id",
+            chatSessionTrackingToken="token",
+        )
+        mock_chat.create = MagicMock(return_value=mock_response)
         mock_client.chat = mock_chat
 
         # Create mock ChatMessage object for the response
@@ -108,7 +117,7 @@ class TestGleanChatModel:
         self.field_mock = self.field_patcher.start()
 
         self.chat_model = ChatGlean()
-        self.chat_model._client = mock_client
+        self.chat_model.client = mock_client
 
         yield
 
@@ -125,7 +134,7 @@ class TestGleanChatModel:
     def test_initialization(self):
         """Test that the chat model initializes correctly."""
         assert self.chat_model is not None
-        assert hasattr(self.chat_model, "_client")
+        assert hasattr(self.chat_model, "client")
 
         self.mock_glean.assert_called_once_with(
             api_token="test-api-token",
@@ -184,7 +193,7 @@ class TestGleanChatModel:
         assert result.generations[0].generation_info["tracking_token"] == "mock-tracking-token"
 
         assert self.chat_model.chat_id == "mock-chat-id"
-        self.chat_model._client.chat.create.assert_called_once()
+        self.chat_model.client.chat.create.assert_called_once()
 
     # ===== ADVANCED TESTS =====
 
