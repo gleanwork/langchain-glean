@@ -107,7 +107,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             "Based on the provided context, sales increased by 15% in Q2."
     """
 
-    k: Optional[int] = Field(default=None, description="Number of results to return. Maps to page_size in the Glean API.")
+    k: Optional[int] = Field(default=10, description="Number of results to return. Maps to page_size in the Glean API.")
 
     def _get_relevant_documents(
         self,
@@ -130,7 +130,8 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                response = self.client.search.query(request=search_request)
+                with Glean(api_token=self.api_token, instance=self.instance) as g:
+                    response = g.client.search.query(request=search_request)
 
             except errors.GleanError as client_err:
                 run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
@@ -177,7 +178,8 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                response = await self.client.search.query_async(request=search_request)
+                with Glean(api_token=self.api_token, instance=self.instance) as g:
+                    response = await g.client.search.query_async(request=search_request)
 
             except errors.GleanError as client_err:
                 await run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))

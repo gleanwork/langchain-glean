@@ -148,16 +148,13 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         Returns:
             The message in LangChain's format.
         """
-        author = message.author if hasattr(message, "author") else None
-        fragments = message.fragments if hasattr(message, "fragments") else []
-
         content = ""
-        if fragments:
-            for fragment in fragments:
-                if hasattr(fragment, "text") and fragment.text:
+        if message.fragments:
+            for fragment in message.fragments:
+                if fragment.text:
                     content += fragment.text
 
-        if author == models.Author.GLEAN_AI:
+        if message.author == models.Author.GLEAN_AI:
             return AIMessage(content=content)
         else:
             return HumanMessage(content=content)
@@ -270,29 +267,43 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
             params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
-            response = self.client.chat.create(
-                messages=params.messages,
-                save_chat=params.save_chat,
-                chat_id=params.chat_id if hasattr(params, "chat_id") else None,
-                agent_config=params.agent_config,
-                inclusions=params.inclusions,
-                exclusions=params.exclusions,
-                timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
-                application_id=params.application_id if hasattr(params, "application_id") else None,
-            )
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response = g.client.chat.create(
+                    messages=params.messages,
+                    save_chat=params.save_chat,
+                    chat_id=params.chat_id if hasattr(params, "chat_id") else None,
+                    agent_config=params.agent_config,
+                    inclusions=params.inclusions,
+                    exclusions=params.exclusions,
+                    timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
+                    application_id=params.application_id if hasattr(params, "application_id") else None,
+                )
 
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception:
-            # Network or credential issues – return dummy response so higher layers can continue
             fallback_message = AIMessage(content="(offline) Unable to reach Glean – returning placeholder response.")
             return ChatResult(generations=[ChatGeneration(message=fallback_message)])
 
         ai_messages = []
-        if response and response.messages:
-            ai_messages = [
-                msg for msg in response.messages if isinstance(msg, dict) and msg.get("author") == "GLEAN_AI" and msg.get("messageType") == "CONTENT"
-            ]
+        if response and hasattr(response, "messages"):
+            for msg in response.messages:
+                if isinstance(msg, dict):
+                    author = models.Author.GLEAN_AI if msg.get("author") == "GLEAN_AI" else models.Author.USER
+                    message_type = models.MessageType.CONTENT if msg.get("messageType") == "CONTENT" else models.MessageType.CONTEXT
+
+                    fragments = []
+                    for frag in msg.get("fragments", []):
+                        if isinstance(frag, dict) and "text" in frag:
+                            fragments.append(models.ChatMessageFragment(text=frag.get("text", "")))
+
+                    chat_message = models.ChatMessage(author=author, message_type=message_type, fragments=fragments)
+
+                    if author == models.Author.GLEAN_AI and message_type == models.MessageType.CONTENT:
+                        ai_messages.append(chat_message)
+                else:
+                    if msg.author == models.Author.GLEAN_AI and msg.message_type == models.MessageType.CONTENT:
+                        ai_messages.append(msg)
 
         if not ai_messages:
             raise ValueError("No AI response found in the Glean response")
@@ -347,29 +358,44 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
             params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
-            response = await self.client.chat.create_async(
-                messages=params.messages,
-                save_chat=params.save_chat,
-                chat_id=params.chat_id if hasattr(params, "chat_id") else None,
-                agent_config=params.agent_config,
-                inclusions=params.inclusions,
-                exclusions=params.exclusions,
-                timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
-                application_id=params.application_id if hasattr(params, "application_id") else None,
-            )
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response = await g.client.chat.create_async(
+                    messages=params.messages,
+                    save_chat=params.save_chat,
+                    chat_id=params.chat_id if hasattr(params, "chat_id") else None,
+                    agent_config=params.agent_config,
+                    inclusions=params.inclusions,
+                    exclusions=params.exclusions,
+                    timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
+                    application_id=params.application_id if hasattr(params, "application_id") else None,
+                )
 
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception:
-            # Network or credential issues – return dummy response so higher layers can continue
             fallback_message = AIMessage(content="(offline) Unable to reach Glean – returning placeholder response.")
             return ChatResult(generations=[ChatGeneration(message=fallback_message)])
 
         ai_messages = []
-        if response and response.messages:
-            ai_messages = [
-                msg for msg in response.messages if isinstance(msg, dict) and msg.get("author") == "GLEAN_AI" and msg.get("messageType") == "CONTENT"
-            ]
+        if response and hasattr(response, "messages"):
+            for msg in response.messages:
+                if isinstance(msg, dict):
+                    author = models.Author.GLEAN_AI if msg.get("author") == "GLEAN_AI" else models.Author.USER
+                    message_type = models.MessageType.CONTENT if msg.get("messageType") == "CONTENT" else models.MessageType.CONTEXT
+
+                    fragments = []
+                    for frag in msg.get("fragments", []):
+                        if isinstance(frag, dict) and "text" in frag:
+                            fragments.append(models.ChatMessageFragment(text=frag.get("text", "")))
+
+                    chat_message = models.ChatMessage(author=author, message_type=message_type, fragments=fragments)
+
+                    if author == models.Author.GLEAN_AI and message_type == models.MessageType.CONTENT:
+                        ai_messages.append(chat_message)
+                else:
+                    # It's already a ChatMessage
+                    if msg.author == models.Author.GLEAN_AI and msg.message_type == models.MessageType.CONTENT:
+                        ai_messages.append(msg)
 
         if not ai_messages:
             raise ValueError("No AI response found in the Glean response")
@@ -425,17 +451,18 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         params.stream = True
 
         try:
-            response_stream = self.client.chat.create_stream(
-                messages=params.messages,
-                save_chat=params.save_chat,
-                chat_id=params.chat_id if hasattr(params, "chat_id") else None,
-                agent_config=params.agent_config,
-                inclusions=params.inclusions,
-                exclusions=params.exclusions,
-                timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
-                application_id=params.application_id if hasattr(params, "application_id") else None,
-                stream=True,
-            )
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response_stream = g.client.chat.create_stream(
+                    messages=params.messages,
+                    save_chat=params.save_chat,
+                    chat_id=params.chat_id if hasattr(params, "chat_id") else None,
+                    agent_config=params.agent_config,
+                    inclusions=params.inclusions,
+                    exclusions=params.exclusions,
+                    timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
+                    application_id=params.application_id if hasattr(params, "application_id") else None,
+                    stream=True,
+                )
 
             for line in response_stream.splitlines():
                 if not line.strip():
@@ -477,7 +504,6 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                 run_manager.on_llm_error(client_err)
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception:
-            # Fallback: yield a single placeholder chunk instead of erroring
             placeholder = AIMessageChunk(content="(offline) placeholder chunk")
             yield ChatGenerationChunk(message=placeholder)
             return
@@ -516,17 +542,18 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         params.stream = True
 
         try:
-            response_stream = await self.client.chat.create_stream_async(
-                messages=params.messages,
-                save_chat=params.save_chat,
-                chat_id=params.chat_id if hasattr(params, "chat_id") else None,
-                agent_config=params.agent_config,
-                inclusions=params.inclusions,
-                exclusions=params.exclusions,
-                timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
-                application_id=params.application_id if hasattr(params, "application_id") else None,
-                stream=True,
-            )
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response_stream = await g.client.chat.create_stream_async(
+                    messages=params.messages,
+                    save_chat=params.save_chat,
+                    chat_id=params.chat_id if hasattr(params, "chat_id") else None,
+                    agent_config=params.agent_config,
+                    inclusions=params.inclusions,
+                    exclusions=params.exclusions,
+                    timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
+                    application_id=params.application_id if hasattr(params, "application_id") else None,
+                    stream=True,
+                )
 
             for line in response_stream.splitlines():
                 if not line.strip():
@@ -568,7 +595,6 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                 await run_manager.on_llm_error(client_err)
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception:
-            # Fallback: yield a single placeholder chunk instead of erroring
             placeholder = AIMessageChunk(content="(offline) placeholder chunk")
             yield ChatGenerationChunk(message=placeholder)
             return

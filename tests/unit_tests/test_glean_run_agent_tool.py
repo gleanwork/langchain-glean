@@ -16,13 +16,13 @@ class TestGleanRunAgentTool:
         os.environ["GLEAN_INSTANCE"] = "test-instance"
         os.environ["GLEAN_API_TOKEN"] = "test-api-token"
 
-        # Mock the Glean class at the mixin level
-        self.mock_glean_patcher = patch("langchain_glean._api_client_mixin.Glean")
+        # Mock the Glean class where it's used directly in the tool
+        self.mock_glean_patcher = patch("langchain_glean.tools.run_agent.Glean")
         self.mock_glean = self.mock_glean_patcher.start()
 
         # Mock the client property of the Glean instance
         mock_client = MagicMock()
-        self.mock_glean.return_value.client = mock_client
+        self.mock_glean.return_value.__enter__.return_value.client = mock_client
 
         # Create mock agents client
         mock_agents = MagicMock()
@@ -42,7 +42,6 @@ class TestGleanRunAgentTool:
 
         # Initialize the tool
         self.tool = GleanRunAgentTool()
-        self.tool.client = mock_client
 
         yield
 
@@ -68,7 +67,7 @@ class TestGleanRunAgentTool:
         result = self.tool._run(agent_id=agent_id, fields=fields)
 
         # Verify that run was called with the correct parameters
-        self.tool.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=None)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=None)
 
         assert result == '{"result": "success", "output": "Mock agent response"}'
 
@@ -81,7 +80,7 @@ class TestGleanRunAgentTool:
         result = self.tool._run(agent_id=agent_id, fields=fields, stream=stream)
 
         # Verify that run was called with the correct parameters
-        self.tool.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=stream)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=stream)
 
         assert result == '{"result": "success", "output": "Mock agent response"}'
 
@@ -92,12 +91,12 @@ class TestGleanRunAgentTool:
 
         # Mock response that doesn't have model_dump_json
         mock_response = "Raw string response"
-        self.tool.client.agents.run.return_value = mock_response
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.return_value = mock_response
 
         result = self.tool._run(agent_id=agent_id, fields=fields)
 
         # Verify that run was called with the correct parameters
-        self.tool.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=None)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=None)
 
         assert result == "Raw string response"
 
@@ -108,7 +107,7 @@ class TestGleanRunAgentTool:
         # Mock GleanError
         error = errors.GleanError("Test error")
         error.raw_response = "Raw error response"
-        self.tool.client.agents.run.side_effect = error
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.side_effect = error
 
         result = self.tool._run(agent_id="test-agent-id", fields={})
 
@@ -119,7 +118,7 @@ class TestGleanRunAgentTool:
     def test_run_with_generic_exception(self) -> None:
         """Test _run when a generic exception occurs."""
         # Mock generic exception
-        self.tool.client.agents.run.side_effect = Exception("Generic error")
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.side_effect = Exception("Generic error")
 
         result = self.tool._run(agent_id="test-agent-id", fields={})
 
@@ -138,7 +137,7 @@ class TestGleanRunAgentTool:
             mock_response.model_dump_json.return_value = '{"result": "success", "output": "Mock agent response"}'
             return mock_response
 
-        self.tool.client.agents.run_async = mock_run_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
 
         result = await self.tool._arun(agent_id=agent_id, fields=fields)
 
@@ -157,7 +156,7 @@ class TestGleanRunAgentTool:
             mock_response.model_dump_json.return_value = '{"result": "success", "output": "Mock agent response"}'
             return mock_response
 
-        self.tool.client.agents.run_async = mock_run_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
 
         result = await self.tool._arun(agent_id=agent_id, fields=fields, stream=stream)
 
@@ -173,7 +172,7 @@ class TestGleanRunAgentTool:
         async def mock_run_async(*args, **kwargs):
             return "Raw string response"
 
-        self.tool.client.agents.run_async = mock_run_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
 
         result = await self.tool._arun(agent_id=agent_id, fields=fields)
 
@@ -192,7 +191,7 @@ class TestGleanRunAgentTool:
         async def mock_run_async(*args, **kwargs):
             raise error
 
-        self.tool.client.agents.run_async = mock_run_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
 
         result = await self.tool._arun(agent_id="test-agent-id", fields={})
 
@@ -208,7 +207,7 @@ class TestGleanRunAgentTool:
         async def mock_run_async(*args, **kwargs):
             raise Exception("Generic error")
 
-        self.tool.client.agents.run_async = mock_run_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
 
         result = await self.tool._arun(agent_id="test-agent-id", fields={})
 

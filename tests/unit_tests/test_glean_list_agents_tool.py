@@ -16,13 +16,13 @@ class TestGleanListAgentsTool:
         os.environ["GLEAN_INSTANCE"] = "test-instance"
         os.environ["GLEAN_API_TOKEN"] = "test-api-token"
 
-        # Mock the Glean class at the mixin level
-        self.mock_glean_patcher = patch("langchain_glean._api_client_mixin.Glean")
+        # Mock the Glean class where it's directly used
+        self.mock_glean_patcher = patch("langchain_glean.tools.list_agents.Glean")
         self.mock_glean = self.mock_glean_patcher.start()
 
         # Mock the client property of the Glean instance
         mock_client = MagicMock()
-        self.mock_glean.return_value.client = mock_client
+        self.mock_glean.return_value.__enter__.return_value.client = mock_client
 
         # Create mock agents client
         mock_agents = MagicMock()
@@ -42,7 +42,6 @@ class TestGleanListAgentsTool:
 
         # Initialize the tool
         self.tool = GleanListAgentsTool()
-        self.tool.client = mock_client
 
         yield
 
@@ -63,7 +62,7 @@ class TestGleanListAgentsTool:
         result = self.tool._run()
 
         # Verify that list was called
-        self.tool.client.agents.list.assert_called_once()
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list.assert_called_once()
 
         expected_json = '{"agents": [{"id": "agent1", "name": "Test Agent"}]}'
         assert result == expected_json
@@ -72,12 +71,12 @@ class TestGleanListAgentsTool:
         """Test _run with a response that doesn't support model_dump_json."""
         # Mock response that doesn't have model_dump_json
         mock_response = "Raw string response"
-        self.tool.client.agents.list.return_value = mock_response
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list.return_value = mock_response
 
         result = self.tool._run()
 
         # Verify that list was called
-        self.tool.client.agents.list.assert_called_once()
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list.assert_called_once()
 
         assert result == "Raw string response"
 
@@ -88,7 +87,7 @@ class TestGleanListAgentsTool:
         # Mock GleanError
         error = errors.GleanError("Test error")
         error.raw_response = "Raw error response"
-        self.tool.client.agents.list.side_effect = error
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list.side_effect = error
 
         result = self.tool._run()
 
@@ -99,7 +98,7 @@ class TestGleanListAgentsTool:
     def test_run_with_generic_exception(self) -> None:
         """Test _run when a generic exception occurs."""
         # Mock generic exception
-        self.tool.client.agents.list.side_effect = Exception("Generic error")
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list.side_effect = Exception("Generic error")
 
         result = self.tool._run()
 
@@ -116,7 +115,7 @@ class TestGleanListAgentsTool:
             mock_response.model_dump_json.return_value = '{"agents": [{"id": "agent1", "name": "Test Agent"}]}'
             return mock_response
 
-        self.tool.client.agents.list_async = mock_list_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list_async = mock_list_async
 
         result = await self.tool._arun()
 
@@ -131,7 +130,7 @@ class TestGleanListAgentsTool:
         async def mock_list_async(*args, **kwargs):
             return "Raw string response"
 
-        self.tool.client.agents.list_async = mock_list_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list_async = mock_list_async
 
         result = await self.tool._arun()
 
@@ -150,7 +149,7 @@ class TestGleanListAgentsTool:
         async def mock_list_async(*args, **kwargs):
             raise error
 
-        self.tool.client.agents.list_async = mock_list_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list_async = mock_list_async
 
         result = await self.tool._arun()
 
@@ -166,7 +165,7 @@ class TestGleanListAgentsTool:
         async def mock_list_async(*args, **kwargs):
             raise Exception("Generic error")
 
-        self.tool.client.agents.list_async = mock_list_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.list_async = mock_list_async
 
         result = await self.tool._arun()
 

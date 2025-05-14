@@ -11,7 +11,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 
-from langchain_glean.chat_models import ChatGleanAgent
+from langchain_glean.chat_models.agent_chat import ChatGleanAgent
 
 
 class TestGleanAgentChatModel:
@@ -59,13 +59,13 @@ class TestGleanAgentChatModel:
         os.environ["GLEAN_INSTANCE"] = "test-instance"
         os.environ["GLEAN_API_TOKEN"] = "test-api-token"
 
-        # Mock the Glean class at the mixin level
-        self.mock_glean_patcher = patch("langchain_glean._api_client_mixin.Glean")
+        # Mock the Glean class where it's directly used
+        self.mock_glean_patcher = patch("langchain_glean.chat_models.agent_chat.Glean")
         self.mock_glean = self.mock_glean_patcher.start()
 
         # Mock the client property of the Glean instance
         mock_client = MagicMock()
-        self.mock_glean.return_value.client = mock_client
+        self.mock_glean.return_value.__enter__.return_value.client = mock_client
 
         # Create mock agents client
         mock_agents = MagicMock()
@@ -93,7 +93,6 @@ class TestGleanAgentChatModel:
         self.field_mock = self.field_patcher.start()
 
         self.chat_model = ChatGleanAgent(agent_id="test-agent-id")
-        self.chat_model.client = mock_client
 
         yield
 
@@ -110,13 +109,7 @@ class TestGleanAgentChatModel:
     def test_initialization(self):
         """Test that the chat model initializes correctly."""
         assert self.chat_model is not None
-        assert hasattr(self.chat_model, "client")
         assert self.chat_model.agent_id == "test-agent-id"
-
-        self.mock_glean.assert_called_once_with(
-            api_token="test-api-token",
-            instance="test-instance",
-        )
 
     def test_initialization_with_missing_env_vars(self):
         """Test initialization with missing environment variables."""
@@ -150,7 +143,9 @@ class TestGleanAgentChatModel:
         assert result.generations[0].message.content == "This is a mock response from Glean Agent."
 
         # Verify the run method was called with correct parameters
-        self.chat_model.client.agents.run.assert_called_once_with(agent_id="test-agent-id", fields={"input": "Hello, how are you?"}, stream=False)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(
+            agent_id="test-agent-id", fields={"input": "Hello, how are you?"}, stream=False
+        )
 
     def test_generate_with_custom_fields(self):
         """Test generating a response with custom fields."""
@@ -161,13 +156,15 @@ class TestGleanAgentChatModel:
         assert result.generations[0].message.content == "This is a mock response from Glean Agent."
 
         # Verify the run method was called with the custom fields
-        self.chat_model.client.agents.run.assert_called_once_with(agent_id="test-agent-id", fields=custom_fields, stream=False)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(
+            agent_id="test-agent-id", fields=custom_fields, stream=False
+        )
 
     def test_generate_with_error(self):
         """Test error handling in _generate."""
         from glean import errors
 
-        self.chat_model.client.agents.run.side_effect = errors.GleanError("Test error")
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.side_effect = errors.GleanError("Test error")
 
         with pytest.raises(ValueError) as exc_info:
             self.chat_model._generate(self.messages)
@@ -176,7 +173,7 @@ class TestGleanAgentChatModel:
 
     def test_generate_with_generic_exception(self):
         """Test generic exception handling in _generate."""
-        self.chat_model.client.agents.run.side_effect = Exception("Network error")
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.side_effect = Exception("Network error")
 
         result = self.chat_model._generate(self.messages)
 
@@ -202,7 +199,7 @@ class TestGleanAgentChatModel:
             mock_response.messages = [mock_message]
             return mock_response
 
-        self.chat_model.client.agents.run_async = mock_run_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
 
         result = await self.chat_model._agenerate(self.messages)
 
@@ -220,7 +217,7 @@ class TestGleanAgentChatModel:
             mock_response.messages = [mock_message]
             return mock_response
 
-        self.chat_model.client.agents.run_async = mock_run_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
 
         custom_fields = {"input": "Custom input", "param1": "value1"}
         result = await self.chat_model._agenerate(self.messages, fields=custom_fields)
@@ -233,11 +230,11 @@ class TestGleanAgentChatModel:
         """Test error handling in _agenerate."""
         from glean import errors
 
-        # Mock a Glean error in the async method
+        # Override the run_async method to raise an error
         async def mock_run_async_error(*args, **kwargs):
             raise errors.GleanError("Test error")
 
-        self.chat_model.client.agents.run_async = mock_run_async_error
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async_error
 
         with pytest.raises(ValueError) as exc_info:
             await self.chat_model._agenerate(self.messages)
@@ -248,11 +245,11 @@ class TestGleanAgentChatModel:
     async def test_agenerate_with_generic_exception(self):
         """Test generic exception handling in _agenerate."""
 
-        # Mock a generic exception in the async method
+        # Override the run_async method to raise a generic exception
         async def mock_run_async_error(*args, **kwargs):
             raise Exception("Network error")
 
-        self.chat_model.client.agents.run_async = mock_run_async_error
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async_error
 
         result = await self.chat_model._agenerate(self.messages)
 
@@ -262,7 +259,7 @@ class TestGleanAgentChatModel:
 
     @pytest.mark.asyncio
     async def test_agenerate_with_stop_sequences(self):
-        """Test that providing stop sequences raises an error."""
+        """Test that providing stop sequences raises an error in _agenerate."""
         with pytest.raises(ValueError) as exc_info:
             await self.chat_model._agenerate(self.messages, stop=["STOP"])
 

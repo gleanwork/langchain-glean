@@ -1,6 +1,6 @@
 from typing import Any
 
-from glean import errors
+from glean import Glean, errors
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,8 @@ class GleanGetAgentSchemaTool(GleanAPIClientMixin, BaseTool):
 
     def _run(self, agent_id: str, **kwargs: Any) -> str:  # noqa: D401
         try:
-            response = self.client.agents.retrieve_inputs(agent_id=agent_id)
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response = g.client.agents.retrieve_inputs(agent_id=agent_id)
 
             if hasattr(response, "model_dump_json"):
                 return response.model_dump_json(indent=2)
@@ -37,7 +38,8 @@ class GleanGetAgentSchemaTool(GleanAPIClientMixin, BaseTool):
 
     async def _arun(self, agent_id: str, **kwargs: Any) -> str:  # noqa: D401
         try:
-            response = await self.client.agents.retrieve_inputs_async(agent_id=agent_id)
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response = await g.client.agents.retrieve_inputs_async(agent_id=agent_id)
 
             if hasattr(response, "model_dump_json"):
                 return response.model_dump_json(indent=2)
