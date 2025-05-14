@@ -270,16 +270,17 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
             params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
-            response = self.client.chat.create(
-                messages=params.messages,
-                save_chat=params.save_chat,
-                chat_id=params.chat_id if hasattr(params, "chat_id") else None,
-                agent_config=params.agent_config,
-                inclusions=params.inclusions,
-                exclusions=params.exclusions,
-                timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
-                application_id=params.application_id if hasattr(params, "application_id") else None,
-            )
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response = g.client.chat.create(
+                    messages=params.messages,
+                    save_chat=params.save_chat,
+                    chat_id=params.chat_id if hasattr(params, "chat_id") else None,
+                    agent_config=params.agent_config,
+                    inclusions=params.inclusions,
+                    exclusions=params.exclusions,
+                    timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
+                    application_id=params.application_id if hasattr(params, "application_id") else None,
+                )
 
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
@@ -347,16 +348,17 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
             params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
-            response = await self.client.chat.create_async(
-                messages=params.messages,
-                save_chat=params.save_chat,
-                chat_id=params.chat_id if hasattr(params, "chat_id") else None,
-                agent_config=params.agent_config,
-                inclusions=params.inclusions,
-                exclusions=params.exclusions,
-                timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
-                application_id=params.application_id if hasattr(params, "application_id") else None,
-            )
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response = await g.client.chat.create_async(
+                    messages=params.messages,
+                    save_chat=params.save_chat,
+                    chat_id=params.chat_id if hasattr(params, "chat_id") else None,
+                    agent_config=params.agent_config,
+                    inclusions=params.inclusions,
+                    exclusions=params.exclusions,
+                    timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
+                    application_id=params.application_id if hasattr(params, "application_id") else None,
+                )
 
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
@@ -425,17 +427,18 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         params.stream = True
 
         try:
-            response_stream = self.client.chat.create_stream(
-                messages=params.messages,
-                save_chat=params.save_chat,
-                chat_id=params.chat_id if hasattr(params, "chat_id") else None,
-                agent_config=params.agent_config,
-                inclusions=params.inclusions,
-                exclusions=params.exclusions,
-                timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
-                application_id=params.application_id if hasattr(params, "application_id") else None,
-                stream=True,
-            )
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response_stream = g.client.chat.create_stream(
+                    messages=params.messages,
+                    save_chat=params.save_chat,
+                    chat_id=params.chat_id if hasattr(params, "chat_id") else None,
+                    agent_config=params.agent_config,
+                    inclusions=params.inclusions,
+                    exclusions=params.exclusions,
+                    timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
+                    application_id=params.application_id if hasattr(params, "application_id") else None,
+                    stream=True,
+                )
 
             for line in response_stream.splitlines():
                 if not line.strip():
@@ -516,17 +519,18 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         params.stream = True
 
         try:
-            response_stream = await self.client.chat.create_stream_async(
-                messages=params.messages,
-                save_chat=params.save_chat,
-                chat_id=params.chat_id if hasattr(params, "chat_id") else None,
-                agent_config=params.agent_config,
-                inclusions=params.inclusions,
-                exclusions=params.exclusions,
-                timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
-                application_id=params.application_id if hasattr(params, "application_id") else None,
-                stream=True,
-            )
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response_stream = await g.client.chat.create_stream_async(
+                    messages=params.messages,
+                    save_chat=params.save_chat,
+                    chat_id=params.chat_id if hasattr(params, "chat_id") else None,
+                    agent_config=params.agent_config,
+                    inclusions=params.inclusions,
+                    exclusions=params.exclusions,
+                    timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
+                    application_id=params.application_id if hasattr(params, "application_id") else None,
+                    stream=True,
+                )
 
             for line in response_stream.splitlines():
                 if not line.strip():

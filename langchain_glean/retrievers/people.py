@@ -128,7 +128,8 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
     ) -> List[Document]:
         try:
             entities_req = self._build_entities_request(query, **kwargs)
-            response = self.client.entities.list(request=entities_req)
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response = g.client.entities.list(request=entities_req)
         except errors.GleanError as err:
             raise ValueError(f"Glean client error: {err}") from err
         except Exception:
@@ -161,7 +162,8 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
     ) -> List[Document]:
         try:
             entities_req = self._build_entities_request(query, **kwargs)
-            response = await self.client.entities.list_async(request=entities_req)
+            with Glean(api_token=self.api_token, instance=self.instance) as g:
+                response = await g.client.entities.list_async(request=entities_req)
         except errors.GleanError as err:
             raise ValueError(f"Glean client error: {err}") from err
         except Exception:
