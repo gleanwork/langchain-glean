@@ -148,16 +148,13 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         Returns:
             The message in LangChain's format.
         """
-        author = message.author if hasattr(message, "author") else None
-        fragments = message.fragments if hasattr(message, "fragments") else []
-
         content = ""
-        if fragments:
-            for fragment in fragments:
-                if hasattr(fragment, "text") and fragment.text:
+        if message.fragments:
+            for fragment in message.fragments:
+                if fragment.text:
                     content += fragment.text
 
-        if author == models.Author.GLEAN_AI:
+        if message.author == models.Author.GLEAN_AI:
             return AIMessage(content=content)
         else:
             return HumanMessage(content=content)
@@ -285,15 +282,28 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception:
-            # Network or credential issues – return dummy response so higher layers can continue
             fallback_message = AIMessage(content="(offline) Unable to reach Glean – returning placeholder response.")
             return ChatResult(generations=[ChatGeneration(message=fallback_message)])
 
         ai_messages = []
-        if response and response.messages:
-            ai_messages = [
-                msg for msg in response.messages if isinstance(msg, dict) and msg.get("author") == "GLEAN_AI" and msg.get("messageType") == "CONTENT"
-            ]
+        if response and hasattr(response, "messages"):
+            for msg in response.messages:
+                if isinstance(msg, dict):
+                    author = models.Author.GLEAN_AI if msg.get("author") == "GLEAN_AI" else models.Author.USER
+                    message_type = models.MessageType.CONTENT if msg.get("messageType") == "CONTENT" else models.MessageType.CONTEXT
+
+                    fragments = []
+                    for frag in msg.get("fragments", []):
+                        if isinstance(frag, dict) and "text" in frag:
+                            fragments.append(models.ChatMessageFragment(text=frag.get("text", "")))
+
+                    chat_message = models.ChatMessage(author=author, message_type=message_type, fragments=fragments)
+
+                    if author == models.Author.GLEAN_AI and message_type == models.MessageType.CONTENT:
+                        ai_messages.append(chat_message)
+                else:
+                    if msg.author == models.Author.GLEAN_AI and msg.message_type == models.MessageType.CONTENT:
+                        ai_messages.append(msg)
 
         if not ai_messages:
             raise ValueError("No AI response found in the Glean response")
@@ -363,15 +373,29 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         except errors.GleanError as client_err:
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception:
-            # Network or credential issues – return dummy response so higher layers can continue
             fallback_message = AIMessage(content="(offline) Unable to reach Glean – returning placeholder response.")
             return ChatResult(generations=[ChatGeneration(message=fallback_message)])
 
         ai_messages = []
-        if response and response.messages:
-            ai_messages = [
-                msg for msg in response.messages if isinstance(msg, dict) and msg.get("author") == "GLEAN_AI" and msg.get("messageType") == "CONTENT"
-            ]
+        if response and hasattr(response, "messages"):
+            for msg in response.messages:
+                if isinstance(msg, dict):
+                    author = models.Author.GLEAN_AI if msg.get("author") == "GLEAN_AI" else models.Author.USER
+                    message_type = models.MessageType.CONTENT if msg.get("messageType") == "CONTENT" else models.MessageType.CONTEXT
+
+                    fragments = []
+                    for frag in msg.get("fragments", []):
+                        if isinstance(frag, dict) and "text" in frag:
+                            fragments.append(models.ChatMessageFragment(text=frag.get("text", "")))
+
+                    chat_message = models.ChatMessage(author=author, message_type=message_type, fragments=fragments)
+
+                    if author == models.Author.GLEAN_AI and message_type == models.MessageType.CONTENT:
+                        ai_messages.append(chat_message)
+                else:
+                    # It's already a ChatMessage
+                    if msg.author == models.Author.GLEAN_AI and msg.message_type == models.MessageType.CONTENT:
+                        ai_messages.append(msg)
 
         if not ai_messages:
             raise ValueError("No AI response found in the Glean response")
@@ -480,7 +504,6 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                 run_manager.on_llm_error(client_err)
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception:
-            # Fallback: yield a single placeholder chunk instead of erroring
             placeholder = AIMessageChunk(content="(offline) placeholder chunk")
             yield ChatGenerationChunk(message=placeholder)
             return
@@ -572,7 +595,6 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                 await run_manager.on_llm_error(client_err)
             raise ValueError(f"Glean client error: {str(client_err)}")
         except Exception:
-            # Fallback: yield a single placeholder chunk instead of erroring
             placeholder = AIMessageChunk(content="(offline) placeholder chunk")
             yield ChatGenerationChunk(message=placeholder)
             return

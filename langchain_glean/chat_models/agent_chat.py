@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, cast
 
-from glean import Glean, errors
+from glean import Glean, errors, models
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -8,9 +8,6 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from pydantic import ConfigDict, Field
 
 from langchain_glean._api_client_mixin import GleanAPIClientMixin
-
-# Type for Glean agent API messages
-GleanApiMessage = Dict[str, Any]
 
 
 class ChatGleanAgent(GleanAPIClientMixin, BaseChatModel):
@@ -53,17 +50,30 @@ class ChatGleanAgent(GleanAPIClientMixin, BaseChatModel):
 
         content = ""
         if hasattr(response, "messages") and response.messages:
-            ai_messages = [m for m in response.messages if isinstance(m, dict) and m.get("author") == "GLEAN_AI"]
+            ai_messages = []
+
+            for msg in response.messages:
+                if isinstance(msg, dict) and msg.get("author") == "GLEAN_AI":
+                    author = models.Author.GLEAN_AI
+
+                    fragments = []
+                    for frag in msg.get("fragments", []):
+                        if isinstance(frag, dict) and "text" in frag:
+                            fragments.append(models.ChatMessageFragment(text=frag.get("text", "")))
+
+                    chat_message = models.ChatMessage(author=author, message_type=models.MessageType.CONTENT, fragments=fragments)
+
+                    ai_messages.append(chat_message)
+                elif hasattr(msg, "author") and msg.author == models.Author.GLEAN_AI:
+                    ai_messages.append(msg)
 
             if ai_messages:
-                last_message: GleanApiMessage = cast(GleanApiMessage, ai_messages[-1])
-                fragments = last_message.get("fragments", [])
+                last_message = ai_messages[-1]
 
-                if fragments:
-                    for frag in fragments:
-                        txt = frag.get("text", "")
-                        if isinstance(txt, str):
-                            content += txt
+                if hasattr(last_message, "fragments") and last_message.fragments:
+                    for fragment in last_message.fragments:
+                        if fragment.text:
+                            content += fragment.text
 
         if not content:
             content = str(response)
@@ -97,17 +107,30 @@ class ChatGleanAgent(GleanAPIClientMixin, BaseChatModel):
 
         content = ""
         if hasattr(response, "messages") and response.messages:
-            ai_messages = [m for m in response.messages if isinstance(m, dict) and m.get("author") == "GLEAN_AI"]
+            ai_messages = []
+
+            for msg in response.messages:
+                if isinstance(msg, dict) and msg.get("author") == "GLEAN_AI":
+                    author = models.Author.GLEAN_AI
+
+                    fragments = []
+                    for frag in msg.get("fragments", []):
+                        if isinstance(frag, dict) and "text" in frag:
+                            fragments.append(models.ChatMessageFragment(text=frag.get("text", "")))
+
+                    chat_message = models.ChatMessage(author=author, message_type=models.MessageType.CONTENT, fragments=fragments)
+
+                    ai_messages.append(chat_message)
+                elif hasattr(msg, "author") and msg.author == models.Author.GLEAN_AI:
+                    ai_messages.append(msg)
 
             if ai_messages:
-                last_message: GleanApiMessage = cast(GleanApiMessage, ai_messages[-1])
-                fragments = last_message.get("fragments", [])
+                last_message = ai_messages[-1]
 
-                if fragments:
-                    for frag in fragments:
-                        txt = frag.get("text", "")
-                        if isinstance(txt, str):
-                            content += txt
+                if hasattr(last_message, "fragments") and last_message.fragments:
+                    for fragment in last_message.fragments:
+                        if fragment.text:
+                            content += fragment.text
 
         if not content:
             content = str(response)
