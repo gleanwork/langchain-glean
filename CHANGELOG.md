@@ -1,3 +1,18 @@
+## v0.3.0 (2025-05-14)
+
+### Feat
+
+- Adding support for Agent APIs via Tools and ChatModel (#12)
+- Adding GleanToolkit
+
+### Fix
+
+- Fixes incorrect call pattern with api-client (#13)
+
+### Refactor
+
+- Extracts auth and client configuration to a mixin
+
 ## v0.2.1 (2025-03-31)
 
 ### Fix
