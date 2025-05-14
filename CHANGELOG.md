@@ -28,6 +28,7 @@
 
 ### Fix
 
+- Fixing publish workflow
 - Updating default for act_as to be empty string vs. None
 - Ensure uv is executing python via venv
 - Fixing imports (they were failing the check imports task
