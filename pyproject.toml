@@ -7,40 +7,28 @@ name = "langchain-glean"
 version = "0.3.0"
 description = "An integration package connecting Glean and LangChain"
 authors = [
-    { name = "John Agan", email = "john.agan@glean.com" }, 
-    { name = "Steve Calvert", email = "steve.calvert@glean.com" }
+  { name = "John Agan", email = "john.agan@glean.com" },
+  { name = "Steve Calvert", email = "steve.calvert@glean.com" },
 ]
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 requires-python = ">=3.9,<4.0"
-dependencies = [
-    "glean-api-client>=0.3.0",
-    "langchain-core>=0.3.45",
-]
+dependencies = ["glean-api-client>=0.4.2", "langchain-core>=0.3.45"]
 
 [project.optional-dependencies]
-dev = [
-    "commitizen>=4.4.1",
-]
+dev = ["commitizen>=4.4.1"]
 test = [
-    "pytest>=7.4.3",
-    "pytest-asyncio>=0.23.2",
-    "python-dotenv>=1.1.0",
-    "pytest-socket>=0.7.0",
-    "pytest-watcher>=0.3.4",
-    "langchain-tests>=0.3.5",
+  "pytest>=7.4.3",
+  "pytest-asyncio>=0.23.2",
+  "python-dotenv>=1.1.0",
+  "pytest-socket>=0.7.0",
+  "pytest-watcher>=0.3.4",
+  "langchain-tests>=0.3.5",
 ]
-codespell = [
-    "codespell>=2.2.6",
-]
+codespell = ["codespell>=2.2.6"]
 test_integration = []
-lint = [
-    "ruff>=0.5",
-]
-typing = [
-    "mypy>=1.10",
-    "types-requests>=2.31.0.1",
-]
+lint = ["ruff>=0.5"]
+typing = ["mypy>=1.10", "types-requests>=2.31.0.1"]
 
 [project.urls]
 "Source Code" = "https://github.com/langchain-ai/langchain/tree/master/libs/partners/glean"
@@ -63,6 +51,6 @@ omit = ["tests/*"]
 [tool.pytest.ini_options]
 addopts = "--strict-markers --strict-config --durations=5"
 markers = [
-    "compile: mark placeholder test used to compile integration tests without running them",
+  "compile: mark placeholder test used to compile integration tests without running them",
 ]
 asyncio_mode = "auto"
