@@ -1,5 +1,7 @@
 # langchain-glean
 
+[![PyPI version](https://badge.fury.io/py/glean-api-client.svg)](https://badge.fury.io/py/glean-api-client)
+
 Connect [Glean](https://www.glean.com/) – The Work AI platform connected to all your data – with [LangChain](https://github.com/langchain-ai/langchain).
 
 ## Overview
