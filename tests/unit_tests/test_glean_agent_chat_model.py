@@ -162,7 +162,7 @@ class TestGleanAgentChatModel:
 
     def test_generate_with_error(self):
         """Test error handling in _generate."""
-        from glean import errors
+        from glean.api_client import errors
 
         self.mock_glean.return_value.__enter__.return_value.client.agents.run.side_effect = errors.GleanError("Test error")
 
@@ -228,7 +228,7 @@ class TestGleanAgentChatModel:
     @pytest.mark.asyncio
     async def test_agenerate_with_error(self):
         """Test error handling in _agenerate."""
-        from glean import errors
+        from glean.api_client import errors
 
         # Override the run_async method to raise an error
         async def mock_run_async_error(*args, **kwargs):

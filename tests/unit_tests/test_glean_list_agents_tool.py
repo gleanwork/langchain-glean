@@ -82,7 +82,7 @@ class TestGleanListAgentsTool:
 
     def test_run_with_glean_error(self) -> None:
         """Test _run when a GleanError occurs."""
-        from glean import errors
+        from glean.api_client import errors
 
         # Mock GleanError
         error = errors.GleanError("Test error")
@@ -139,7 +139,7 @@ class TestGleanListAgentsTool:
     @pytest.mark.asyncio
     async def test_arun_with_glean_error(self) -> None:
         """Test _arun when a GleanError occurs."""
-        from glean import errors
+        from glean.api_client import errors
 
         # Mock GleanError
         error = errors.GleanError("Test error")

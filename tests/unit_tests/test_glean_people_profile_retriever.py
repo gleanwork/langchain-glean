@@ -3,7 +3,12 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from glean.models import FacetFilter, FacetFilterValue, ListEntitiesRequest, RelationType
+from glean.api_client.models import (
+    FacetFilter,
+    FacetFilterValue,
+    ListEntitiesRequest,
+    RelationType,
+)
 from langchain_core.documents import Document
 
 from langchain_glean.retrievers.people import GleanPeopleProfileRetriever, PeopleProfileBasicRequest
@@ -227,7 +232,7 @@ class TestGleanPeopleProfileRetriever:
 
     def test_error_handling(self) -> None:
         """Test error handling when Glean API call fails."""
-        from glean import errors
+        from glean.api_client import errors
 
         # Simulate a GleanError
         self.mock_glean.return_value.__enter__.return_value.client.entities.list.side_effect = errors.GleanError("Test error")

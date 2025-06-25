@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, cast
 
-from glean import Glean, errors, models
+from glean.api_client import Glean, errors, models
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage

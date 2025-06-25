@@ -1,6 +1,6 @@
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union, cast
 
-from glean import Glean, errors, models  # noqa: F401
+from glean.api_client import Glean, errors, models  # noqa: F401
 from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,

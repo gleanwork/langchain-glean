@@ -3,7 +3,13 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from glean.models import FacetFilter, FacetFilterValue, RelationType, SearchRequest, SearchRequestOptions
+from glean.api_client.models import (
+    FacetFilter,
+    FacetFilterValue,
+    RelationType,
+    SearchRequest,
+    SearchRequestOptions,
+)
 from langchain_core.documents import Document
 
 from langchain_glean.retrievers.search import GleanSearchRetriever

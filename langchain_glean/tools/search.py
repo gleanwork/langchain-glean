@@ -1,6 +1,6 @@
 from typing import Any, Dict, Union
 
-from glean import errors
+from glean.api_client import errors
 from langchain_core.tools import BaseTool
 from pydantic import Field
 

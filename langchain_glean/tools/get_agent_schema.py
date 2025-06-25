@@ -1,6 +1,6 @@
 from typing import Any
 
-from glean import Glean, errors
+from glean.api_client import Glean, errors
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
