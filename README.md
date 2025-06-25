@@ -78,7 +78,7 @@ response = chat.invoke(ChatBasicRequest(
 #### Using the full Glean SDK request
 
 ```python
-from glean import models
+from glean.api_client import models
 from langchain_glean.chat_models import ChatGlean
 
 chat = ChatGlean()
@@ -146,7 +146,7 @@ results = retriever.invoke(SearchBasicRequest(
 #### Using the full Glean SDK request
 
 ```python
-from glean import models
+from glean.api_client import models
 from langchain_glean.retrievers import GleanSearchRetriever
 
 retriever = GleanSearchRetriever()
@@ -186,7 +186,7 @@ results = people.invoke(PeopleProfileBasicRequest(
 #### Using the full Glean SDK request
 
 ```python
-from glean import models
+from glean.api_client import models
 from langchain_glean.retrievers import GleanPeopleProfileRetriever
 
 people = GleanPeopleProfileRetriever()

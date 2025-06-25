@@ -3,7 +3,12 @@ import unittest
 from typing import List, Type
 
 from dotenv import load_dotenv
-from glean.models import FacetFilter, FacetFilterValue, ListEntitiesRequest, RelationType
+from glean.api_client.models import (
+    FacetFilter,
+    FacetFilterValue,
+    ListEntitiesRequest,
+    RelationType,
+)
 from langchain_core.documents import Document
 
 from langchain_glean.retrievers.people import GleanPeopleProfileRetriever, PeopleProfileBasicRequest

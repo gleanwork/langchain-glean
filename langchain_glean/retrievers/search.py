@@ -1,8 +1,7 @@
 # ruff: noqa: I001
 from typing import Any, Iterable, List, Optional, Union
 
-from glean import Glean  # noqa: F401
-from glean import errors, models
+from glean.api_client import Glean, errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,

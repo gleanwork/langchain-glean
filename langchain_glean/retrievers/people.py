@@ -3,8 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
 
-from glean import Glean  # noqa: F401
-from glean import errors, models
+from glean.api_client import Glean, errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
