@@ -1,3 +1,9 @@
+## v0.3.2 (2025-06-25)
+
+### Fix
+
+- Update tests with new SDK import path (#17)
+
 ## v0.3.1 (2025-05-17)
 
 ### Fix
