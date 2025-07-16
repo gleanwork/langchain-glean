@@ -1,11 +1,11 @@
 from typing import Any, Dict, Union
 
-from glean.api_client import errors
 from langchain_core.tools import BaseTool
 from pydantic import Field
 
 from langchain_glean.retrievers import GleanSearchRetriever
 from langchain_glean.retrievers.search import SearchBasicRequest
+from langchain_glean.error_handling import handle_api_error
 
 
 class GleanSearchTool(BaseTool):
@@ -54,13 +54,10 @@ class GleanSearchTool(BaseTool):
 
             return "\n".join(results_str)
 
-        except errors.GleanError as e:
-            error_details = f"Glean API error: {str(e)}"
-            if hasattr(e, "raw_response") and e.raw_response:
-                error_details += f": {e.raw_response}"
-            return error_details
         except Exception as e:
-            return f"Error running Glean search: {str(e)}"
+            # For tools, we return error messages instead of raising
+            error = handle_api_error(e, "search tool", reraise=False)
+            return f"Search failed: {str(error)}"
 
     async def _arun(self, query: Union[str, Dict[str, Any], SearchBasicRequest]) -> str:
         """Run the tool asynchronously.
@@ -93,10 +90,7 @@ class GleanSearchTool(BaseTool):
 
             return "\n".join(results_str)
 
-        except errors.GleanError as e:
-            error_details = f"Glean API error: {str(e)}"
-            if hasattr(e, "raw_response") and e.raw_response:
-                error_details += f": {e.raw_response}"
-            return error_details
         except Exception as e:
-            return f"Error running Glean search: {str(e)}"
+            # For tools, we return error messages instead of raising
+            error = handle_api_error(e, "async search tool", reraise=False)
+            return f"Search failed: {str(error)}"

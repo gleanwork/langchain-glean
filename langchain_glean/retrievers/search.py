@@ -11,6 +11,7 @@ from langchain_core.retrievers import BaseRetriever
 from pydantic import BaseModel, Field, field_validator
 
 from langchain_glean._api_client_mixin import GleanAPIClientMixin
+from langchain_glean.error_handling import handle_retriever_error, handle_retriever_error_sync
 
 
 class SearchBasicRequest(BaseModel):
@@ -132,8 +133,8 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
                 with Glean(api_token=self.api_token, instance=self.instance) as g:
                     response = g.client.search.query(request=search_request)
 
-            except errors.GleanError as client_err:
-                run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
+            except Exception as client_err:
+                handle_retriever_error_sync(client_err, run_manager, "search query")
                 return []
 
             documents = []
@@ -143,7 +144,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
                         document = self._build_document(result)
                         documents.append(document)
                     except Exception as doc_error:
-                        run_manager.on_retriever_error(doc_error)
+                        handle_retriever_error_sync(doc_error, run_manager, "document building")
                         continue
 
             k_limit = kwargs.get("k") if "k" in kwargs else self.k
@@ -153,7 +154,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             return documents
 
         except Exception as e:
-            run_manager.on_retriever_error(e)
+            handle_retriever_error_sync(e, run_manager, "search operation")
             return []
 
     async def _aget_relevant_documents(
@@ -180,8 +181,8 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
                 with Glean(api_token=self.api_token, instance=self.instance) as g:
                     response = await g.client.search.query_async(request=search_request)
 
-            except errors.GleanError as client_err:
-                await run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
+            except Exception as client_err:
+                await handle_retriever_error(client_err, run_manager, "search query")
                 return []
 
             documents = []
@@ -191,7 +192,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
                         document = self._build_document(result)
                         documents.append(document)
                     except Exception as doc_error:
-                        await run_manager.on_retriever_error(doc_error)
+                        await handle_retriever_error(doc_error, run_manager, "document building")
                         continue
 
             k_limit = kwargs.get("k") if "k" in kwargs else self.k
@@ -201,7 +202,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             return documents
 
         except Exception as e:
-            await run_manager.on_retriever_error(e)
+            await handle_retriever_error(e, run_manager, "search operation")
             return []
 
     def _build_search_request(self, query: Union[str, "SearchBasicRequest", models.SearchRequest], **kwargs: Any) -> models.SearchRequest:

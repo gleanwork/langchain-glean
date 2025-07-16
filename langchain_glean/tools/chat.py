@@ -5,6 +5,7 @@ from typing import Any, Dict
 from langchain_core.tools import BaseTool
 
 from langchain_glean.chat_models.chat import ChatBasicRequest, ChatGlean
+from langchain_glean.error_handling import handle_api_error
 
 
 class GleanChatTool(BaseTool):
@@ -43,8 +44,10 @@ class GleanChatTool(BaseTool):
                 return cg.invoke(tool_input).content  # type: ignore[return-value]
 
             return f"Error: Unexpected input type {type(tool_input)}"
-        except Exception as e:  # noqa: BLE001
-            return f"Error running Glean chat: {str(e)}"
+        except Exception as e:
+            # For tools, we return error messages instead of raising
+            error = handle_api_error(e, "chat tool", reraise=False)
+            return f"Chat failed: {str(error)}"
 
     async def _arun(self, *args: Any, **kwargs: Any) -> Any:
         try:
@@ -74,8 +77,10 @@ class GleanChatTool(BaseTool):
                 return (await cg.ainvoke(tool_input)).content  # type: ignore[return-value]
 
             return f"Error: Unexpected input type {type(tool_input)}"
-        except Exception as e:  # noqa: BLE001
-            return f"Error running Glean chat: {str(e)}"
+        except Exception as e:
+            # For tools, we return error messages instead of raising
+            error = handle_api_error(e, "async chat tool", reraise=False)
+            return f"Chat failed: {str(error)}"
 
     def invoke(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore[override]
         """Override BaseTool.invoke to support legacy message/context kwargs."""

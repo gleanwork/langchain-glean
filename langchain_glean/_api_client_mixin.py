@@ -3,6 +3,8 @@ from typing import Any, Dict, Optional
 from langchain_core.utils import get_from_dict_or_env
 from pydantic import Field, model_validator
 
+from langchain_glean.error_handling import validate_configuration
+
 
 class GleanAPIClientMixin:  # noqa: D401
     """Shared auth + client bootstrap for Glean wrappers.
@@ -24,4 +26,12 @@ class GleanAPIClientMixin:  # noqa: D401
         values["instance"] = get_from_dict_or_env(values, "instance", "GLEAN_INSTANCE")
         values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
         values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
+        
+        # Validate configuration
+        validate_configuration(
+            values["instance"], 
+            values["api_token"], 
+            values.get("act_as")
+        )
+        
         return values

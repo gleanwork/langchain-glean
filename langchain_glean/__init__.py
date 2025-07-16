@@ -1,6 +1,16 @@
 from importlib import metadata
 
 from langchain_glean.chat_models import ChatGlean, ChatGleanAgent
+from langchain_glean.exceptions import (
+    GleanAPIError,
+    GleanAuthenticationError,
+    GleanConfigurationError,
+    GleanIntegrationError,
+    GleanNotFoundError,
+    GleanRateLimitError,
+    GleanTimeoutError,
+    GleanValidationError,
+)
 from langchain_glean.retrievers import (
     GleanPeopleProfileRetriever,
     GleanSearchRetriever,
@@ -33,5 +43,14 @@ __all__ = [
     "GleanListAgentsTool",
     "GleanGetAgentSchemaTool",
     "GleanRunAgentTool",
+    # Exception classes
+    "GleanIntegrationError",
+    "GleanAPIError",
+    "GleanConfigurationError",
+    "GleanValidationError",
+    "GleanAuthenticationError",
+    "GleanNotFoundError",
+    "GleanRateLimitError",
+    "GleanTimeoutError",
     "__version__",
 ]

@@ -13,6 +13,7 @@ from langchain_core.retrievers import BaseRetriever
 from pydantic import BaseModel, Field, model_validator
 
 from langchain_glean._api_client_mixin import GleanAPIClientMixin
+from langchain_glean.error_handling import handle_retriever_error, handle_retriever_error_sync
 
 
 class PeopleProfileBasicRequest(BaseModel):
@@ -129,10 +130,8 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
             entities_req = self._build_entities_request(query, **kwargs)
             with Glean(api_token=self.api_token, instance=self.instance) as g:
                 response = g.client.entities.list(request=entities_req)
-        except errors.GleanError as err:
-            raise ValueError(f"Glean client error: {err}") from err
-        except Exception:
-            # Fallback – return empty results when the SDK call fails (e.g. no network)
+        except Exception as err:
+            handle_retriever_error_sync(err, run_manager, "people profile search")
             return []
 
         docs: List[Document] = []
@@ -163,9 +162,8 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
             entities_req = self._build_entities_request(query, **kwargs)
             with Glean(api_token=self.api_token, instance=self.instance) as g:
                 response = await g.client.entities.list_async(request=entities_req)
-        except errors.GleanError as err:
-            raise ValueError(f"Glean client error: {err}") from err
-        except Exception:
+        except Exception as err:
+            await handle_retriever_error(err, run_manager, "async people profile search")
             return []
 
         docs: List[Document] = []

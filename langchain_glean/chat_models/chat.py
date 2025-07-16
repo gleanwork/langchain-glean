@@ -18,6 +18,7 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from langchain_glean._api_client_mixin import GleanAPIClientMixin
+from langchain_glean.error_handling import handle_api_error
 
 
 class ChatBasicRequest(BaseModel):
@@ -279,11 +280,9 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                     application_id=params.application_id if hasattr(params, "application_id") else None,
                 )
 
-        except errors.GleanError as client_err:
-            raise ValueError(f"Glean client error: {str(client_err)}")
-        except Exception:
-            fallback_message = AIMessage(content="(offline) Unable to reach Glean – returning placeholder response.")
-            return ChatResult(generations=[ChatGeneration(message=fallback_message)])
+        except Exception as client_err:
+            # For chat models, we want to re-raise errors so users can handle them
+            handle_api_error(client_err, "chat generation", reraise=True)
 
         ai_messages = []
         if response and hasattr(response, "messages"):
@@ -370,11 +369,9 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                     application_id=params.application_id if hasattr(params, "application_id") else None,
                 )
 
-        except errors.GleanError as client_err:
-            raise ValueError(f"Glean client error: {str(client_err)}")
-        except Exception:
-            fallback_message = AIMessage(content="(offline) Unable to reach Glean – returning placeholder response.")
-            return ChatResult(generations=[ChatGeneration(message=fallback_message)])
+        except Exception as client_err:
+            # For chat models, we want to re-raise errors so users can handle them
+            handle_api_error(client_err, "async chat generation", reraise=True)
 
         ai_messages = []
         if response and hasattr(response, "messages"):
@@ -499,14 +496,11 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                         run_manager.on_llm_error(parsing_error)
                     raise ValueError(f"Error parsing stream response: {str(parsing_error)}")
 
-        except errors.GleanError as client_err:
+        except Exception as client_err:
             if run_manager:
                 run_manager.on_llm_error(client_err)
-            raise ValueError(f"Glean client error: {str(client_err)}")
-        except Exception:
-            placeholder = AIMessageChunk(content="(offline) placeholder chunk")
-            yield ChatGenerationChunk(message=placeholder)
-            return
+            # For streaming, we want to re-raise errors so users can handle them
+            handle_api_error(client_err, "chat streaming", reraise=True)
 
     async def _astream(
         self,
@@ -590,14 +584,11 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                         await run_manager.on_llm_error(parsing_error)
                     raise ValueError(f"Error parsing stream response: {str(parsing_error)}")
 
-        except errors.GleanError as client_err:
+        except Exception as client_err:
             if run_manager:
                 await run_manager.on_llm_error(client_err)
-            raise ValueError(f"Glean client error: {str(client_err)}")
-        except Exception:
-            placeholder = AIMessageChunk(content="(offline) placeholder chunk")
-            yield ChatGenerationChunk(message=placeholder)
-            return
+            # For async streaming, we want to re-raise errors so users can handle them
+            handle_api_error(client_err, "async chat streaming", reraise=True)
 
     def invoke(  # type: ignore[override]
         self,
