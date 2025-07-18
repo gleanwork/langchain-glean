@@ -261,7 +261,7 @@ dependencies = [
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cb/99/da764595c6c8a649b64eace71d7f75ff6fe610a65b7d26a82f8a339e75ef/glean_api_client-0.6.6.tar.gz", hash = "sha256:77f8292781caf1576119549ed5b8832108b21b97b5d399becf37b7a9a99af5a2", size = 219942 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4b/19/67756bb340354ede358fabff2d7793153a16f8ae20a1025e7ef5f0ba8e5f/glean_api_client-0.6.6-py3-none-any.whl", hash = "sha256:88caf5120fc25e00770739874ed3b6236fd6aa5866cd5c74e9d6258fbeefa32a", size = 430620 },
+    { url = "https://files.pythonhosted.org/packages/4b/19/67756bb340354ede358fabff2d7793153a16f8ae20a1025e7ef5f0ba8e5f/glean_api_client-0.6.6-py3-none-any.whl", hash = "sha256:88caf5120fc25e00770739874ed3b6236fd6aa5866cd5c74e9d6258fbeefa32a", size = 463201 },
 ]
 
 [[package]]
@@ -384,7 +384,7 @@ wheels = [
 
 [[package]]
 name = "langchain-glean"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "." }
 dependencies = [
     { name = "glean-api-client" },

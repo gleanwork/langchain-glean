@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langchain-glean"
-version = "0.3.1"
+version = "0.3.2"
 description = "An integration package connecting Glean and LangChain"
 authors = [
   { name = "John Agan", email = "john.agan@glean.com" },
