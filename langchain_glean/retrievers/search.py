@@ -130,7 +130,8 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
 
             try:
                 with Glean(api_token=self.api_token, instance=self.instance) as g:
-                    response = g.client.search.query(request=search_request)
+                    headers = self._http_headers()
+                    response = g.client.search.query(request=search_request, http_headers=headers)
 
             except errors.GleanError as client_err:
                 run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
@@ -178,7 +179,8 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
 
             try:
                 with Glean(api_token=self.api_token, instance=self.instance) as g:
-                    response = await g.client.search.query_async(request=search_request)
+                    headers = self._http_headers()
+                    response = await g.client.search.query_async(request=search_request, http_headers=headers)
 
             except errors.GleanError as client_err:
                 await run_manager.on_retriever_error(Exception(f"Glean client error: {str(client_err)}"))
