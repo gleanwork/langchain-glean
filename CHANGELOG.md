@@ -1,3 +1,9 @@
+## v0.3.3 (2025-07-18)
+
+### Fix
+
+- Ensure `act_as` and `GLEAN_ACT_AS` are propagated (#20)
+
 ## v0.3.2 (2025-06-25)
 
 ### Fix
