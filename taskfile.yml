@@ -1,7 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 #
 # see https://taskfile.dev/usage/
-# brew install go-task
 #
 version: 3
 dotenv: [".env"]
@@ -28,18 +27,11 @@ tasks:
   # Setup task: Set up local environment (install dependencies, etc.)
   setup:
     desc: Set up local environment (install dependencies, etc.)
-    cmds:
-      - task: install:uv
-
-  # Install uv task: Install Python dependencies using uv
-  install:uv:
-    silent: true
     sources:
       - "pyproject.toml"
     cmds:
-      - echo "Creating virtual environment and installing dependencies with uv..."
-      - "uv venv .venv"
-      - "uv pip install -e .[dev,test,lint,typing,codespell]"
+      - echo "Installing dependencies with uv..."
+      - "uv sync --all-extras"
     status:
       - test -d ".venv"
 

@@ -4,31 +4,28 @@ This document provides guidelines and instructions for setting up your developme
 
 ## Development Environment
 
-This project uses [uv](https://github.com/astral-sh/uv) for dependency management and [go-task](https://taskfile.dev/) for task running.
+This project uses [mise](https://mise.jdx.dev/) for tool management, [uv](https://github.com/astral-sh/uv) for dependency management, and [go-task](https://taskfile.dev/) for task running.
 
 ### Prerequisites
 
-1. Install uv:
+1. Install mise:
 
     ```bash
-    pip install uv
+    curl https://mise.run | sh
     ```
 
-1. Install go-task:
-
-    ```bash
-    brew install go-task
-    ```
+    Or via package manager (see [mise installation docs](https://mise.jdx.dev/getting-started.html)).
 
 ### Setup Development Environment
 
-1. Set up the development environment:
+1. Install tools and set up the development environment:
 
     ```bash
+    mise install
     task setup
     ```
 
-This will create a virtual environment and install all dependencies. The virtual environment will be activated automatically by uv.
+This will install Python, uv, and task via mise, then create a virtual environment and install all dependencies.
 
 ## Development Tasks
 

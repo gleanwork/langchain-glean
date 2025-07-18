@@ -313,8 +313,8 @@ chat.invoke([HumanMessage(content="Continue...")])
 
 ## Contributing
 
-1. `uv sync`
-2. `pytest && ruff check . && mypy .`
+1. `mise install && task setup`
+2. `task lint && task test`
 3. Open a PR!
 
 ## Links

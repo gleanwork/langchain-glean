@@ -1,0 +1,7 @@
+[env]
+PROJECT_NAME = "{{ cwd | basename }}"
+
+[tools]
+python = "{{ get_env(name='PYTHON_VERSION', default='3.10') }}"
+task = "latest"
+uv = "latest"
