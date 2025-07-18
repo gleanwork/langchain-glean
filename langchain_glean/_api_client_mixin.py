@@ -25,3 +25,7 @@ class GleanAPIClientMixin:  # noqa: D401
         values["api_token"] = get_from_dict_or_env(values, "api_token", "GLEAN_API_TOKEN")
         values["act_as"] = get_from_dict_or_env(values, "act_as", "GLEAN_ACT_AS", default="")
         return values
+
+    def _http_headers(self) -> Optional[Dict[str, str]]:
+        """Return HTTP headers for impersonation if ``act_as`` is set."""
+        return {"X-Glean-ActAs": str(self.act_as)} if self.act_as else None

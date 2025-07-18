@@ -161,7 +161,10 @@ class TestGleanSearchRetriever:
             assert kwargs["max_snippet_size"] == 100
 
             # Verify that query was called with the mocked search request
-            self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once_with(request=search_request_mock)
+            self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once_with(
+                request=search_request_mock,
+                http_headers={"X-Glean-ActAs": "test@example.com"},
+            )
 
     def test_build_document(self) -> None:
         """Test the _build_document method."""
@@ -199,7 +202,10 @@ class TestGleanSearchRetriever:
         docs = self.retriever.invoke(search_request)
 
         # Verify the search was called with our request object
-        self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once_with(request=search_request)
+        self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once_with(
+            request=search_request,
+            http_headers={"X-Glean-ActAs": "test@example.com"},
+        )
 
         # Verify we got documents back
         assert len(docs) == 1

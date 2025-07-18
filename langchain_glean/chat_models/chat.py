@@ -268,6 +268,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
 
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
+                headers = self._http_headers()
                 response = g.client.chat.create(
                     messages=params.messages,
                     save_chat=params.save_chat,
@@ -277,6 +278,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                     exclusions=params.exclusions,
                     timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
                     application_id=params.application_id if hasattr(params, "application_id") else None,
+                    http_headers=headers,
                 )
 
         except errors.GleanError as client_err:
@@ -359,6 +361,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
 
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
+                headers = self._http_headers()
                 response = await g.client.chat.create_async(
                     messages=params.messages,
                     save_chat=params.save_chat,
@@ -368,6 +371,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                     exclusions=params.exclusions,
                     timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
                     application_id=params.application_id if hasattr(params, "application_id") else None,
+                    http_headers=headers,
                 )
 
         except errors.GleanError as client_err:
@@ -452,6 +456,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
 
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
+                headers = self._http_headers()
                 response_stream = g.client.chat.create_stream(
                     messages=params.messages,
                     save_chat=params.save_chat,
@@ -462,6 +467,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                     timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
                     application_id=params.application_id if hasattr(params, "application_id") else None,
                     stream=True,
+                    http_headers=headers,
                 )
 
             for line in response_stream.splitlines():
@@ -543,6 +549,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
 
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
+                headers = self._http_headers()
                 response_stream = await g.client.chat.create_stream_async(
                     messages=params.messages,
                     save_chat=params.save_chat,
@@ -553,6 +560,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
                     timeout_millis=params.timeout_millis if hasattr(params, "timeout_millis") else None,
                     application_id=params.application_id if hasattr(params, "application_id") else None,
                     stream=True,
+                    http_headers=headers,
                 )
 
             for line in response_stream.splitlines():
