@@ -24,7 +24,7 @@ class GleanRunAgentTool(GleanAPIClientMixin, BaseTool):
     def _run(self, agent_id: str, fields: Dict[str, str], **kwargs: Any) -> str:  # noqa: D401
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
-                response = g.client.agents.run(agent_id=agent_id, input_=fields)
+                response = g.client.agents.run(agent_id=agent_id, input=fields)
 
             if hasattr(response, "model_dump_json"):
                 return response.model_dump_json(indent=2)
@@ -41,7 +41,7 @@ class GleanRunAgentTool(GleanAPIClientMixin, BaseTool):
     async def _arun(self, agent_id: str, fields: Dict[str, str], **kwargs: Any) -> str:  # noqa: D401
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
-                response = await g.client.agents.run_async(agent_id=agent_id, input_=fields)
+                response = await g.client.agents.run_async(agent_id=agent_id, input=fields)
 
             if hasattr(response, "model_dump_json"):
                 return response.model_dump_json(indent=2)
