@@ -144,7 +144,7 @@ class TestGleanAgentChatModel:
 
         # Verify the run method was called with correct parameters
         self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(
-            agent_id="test-agent-id", fields={"input": "Hello, how are you?"}, stream=False
+            agent_id="test-agent-id", input={"input": "Hello, how are you?"}
         )
 
     def test_generate_with_custom_fields(self):
@@ -156,15 +156,16 @@ class TestGleanAgentChatModel:
         assert result.generations[0].message.content == "This is a mock response from Glean Agent."
 
         # Verify the run method was called with the custom fields
-        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(
-            agent_id="test-agent-id", fields=custom_fields, stream=False
-        )
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id="test-agent-id", input=custom_fields)
 
     def test_generate_with_error(self):
         """Test error handling in _generate."""
         from glean.api_client import errors
 
-        self.mock_glean.return_value.__enter__.return_value.client.agents.run.side_effect = errors.GleanError("Test error")
+        # Mock GleanError with required raw_response
+        mock_response = MagicMock()
+        error = errors.GleanError("Test error", raw_response=mock_response)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.side_effect = error
 
         with pytest.raises(ValueError) as exc_info:
             self.chat_model._generate(self.messages)
@@ -230,9 +231,13 @@ class TestGleanAgentChatModel:
         """Test error handling in _agenerate."""
         from glean.api_client import errors
 
+        # Mock GleanError with required raw_response
+        mock_response = MagicMock()
+        error = errors.GleanError("Test error", raw_response=mock_response)
+
         # Override the run_async method to raise an error
         async def mock_run_async_error(*args, **kwargs):
-            raise errors.GleanError("Test error")
+            raise error
 
         self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async_error
 
