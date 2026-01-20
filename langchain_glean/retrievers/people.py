@@ -128,7 +128,9 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
         try:
             entities_req = self._build_entities_request(query, **kwargs)
             with Glean(api_token=self.api_token, instance=self.instance) as g:
-                response = g.client.entities.list(**entities_req.model_dump(exclude_none=True))
+                # Use vars() instead of model_dump() due to SDK's custom serializer
+                params = {k: v for k, v in vars(entities_req).items() if not k.startswith("_") and v is not None}
+                response = g.client.entities.list(**params)
         except errors.GleanError as err:
             raise ValueError(f"Glean client error: {err}") from err
         except Exception:
@@ -162,7 +164,9 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
         try:
             entities_req = self._build_entities_request(query, **kwargs)
             with Glean(api_token=self.api_token, instance=self.instance) as g:
-                response = await g.client.entities.list_async(**entities_req.model_dump(exclude_none=True))
+                # Use vars() instead of model_dump() due to SDK's custom serializer
+                params = {k: v for k, v in vars(entities_req).items() if not k.startswith("_") and v is not None}
+                response = await g.client.entities.list_async(**params)
         except errors.GleanError as err:
             raise ValueError(f"Glean client error: {err}") from err
         except Exception:
