@@ -41,7 +41,7 @@ class ChatGleanAgent(GleanAPIClientMixin, BaseChatModel):
 
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
-                response = g.client.agents.run(agent_id=self.agent_id, fields=fields, stream=False)
+                response = g.client.agents.run(agent_id=self.agent_id, input=fields)
         except errors.GleanError as e:
             raise ValueError(f"Glean client error: {e}") from e
         except Exception:
@@ -98,7 +98,7 @@ class ChatGleanAgent(GleanAPIClientMixin, BaseChatModel):
 
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
-                response = await g.client.agents.run_async(agent_id=self.agent_id, fields=fields, stream=False)
+                response = await g.client.agents.run_async(agent_id=self.agent_id, input=fields)
         except errors.GleanError as e:
             raise ValueError(f"Glean client error: {e}") from e
         except Exception:
