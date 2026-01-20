@@ -175,3 +175,6 @@ cython_debug/
 .task/
 .llm/
 examples/
+
+# Local mise config (contains secrets)
+.mise.local.toml
