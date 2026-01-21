@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from glean.api_client import Glean, errors
 from langchain_core.tools import BaseTool
@@ -10,7 +10,6 @@ from langchain_glean._api_client_mixin import GleanAPIClientMixin
 class RunAgentArgs(BaseModel):
     agent_id: str = Field(..., description="ID of the agent to run")
     fields: Dict[str, str] = Field(default_factory=dict, description="Input fields mapping for the agent")
-    stream: Optional[bool] = Field(default=None, description="Whether to stream the response")
 
 
 class GleanRunAgentTool(GleanAPIClientMixin, BaseTool):
@@ -22,7 +21,7 @@ class GleanRunAgentTool(GleanAPIClientMixin, BaseTool):
 
     args_schema: type = RunAgentArgs
 
-    def _run(self, agent_id: str, fields: Dict[str, str], stream: Optional[bool] = None, **kwargs: Any) -> str:  # noqa: D401
+    def _run(self, agent_id: str, fields: Dict[str, str], **kwargs: Any) -> str:  # noqa: D401
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
                 response = g.client.agents.run(agent_id=agent_id, input=fields)
@@ -39,7 +38,7 @@ class GleanRunAgentTool(GleanAPIClientMixin, BaseTool):
         except Exception as e:  # noqa: BLE001
             return f"Error running agent: {e}"
 
-    async def _arun(self, agent_id: str, fields: Dict[str, str], stream: Optional[bool] = None, **kwargs: Any) -> str:  # noqa: D401
+    async def _arun(self, agent_id: str, fields: Dict[str, str], **kwargs: Any) -> str:  # noqa: D401
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
                 response = await g.client.agents.run_async(agent_id=agent_id, input=fields)

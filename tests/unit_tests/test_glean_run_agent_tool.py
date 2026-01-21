@@ -71,19 +71,6 @@ class TestGleanRunAgentTool:
 
         assert result == '{"result": "success", "output": "Mock agent response"}'
 
-    def test_run_with_all_params(self) -> None:
-        """Test _run with all parameters."""
-        agent_id = "test-agent-id"
-        fields = {"input": "Test input", "param1": "value1"}
-        stream = True
-
-        result = self.tool._run(agent_id=agent_id, fields=fields, stream=stream)
-
-        # Verify that run was called with the correct parameters
-        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, input=fields)
-
-        assert result == '{"result": "success", "output": "Mock agent response"}'
-
     def test_run_with_non_json_response(self) -> None:
         """Test _run with a response that doesn't support model_dump_json."""
         agent_id = "test-agent-id"
@@ -140,25 +127,6 @@ class TestGleanRunAgentTool:
         self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
 
         result = await self.tool._arun(agent_id=agent_id, fields=fields)
-
-        assert result == '{"result": "success", "output": "Mock agent response"}'
-
-    @pytest.mark.asyncio
-    async def test_arun_with_all_params(self) -> None:
-        """Test _arun with all parameters."""
-        agent_id = "test-agent-id"
-        fields = {"input": "Test input", "param1": "value1"}
-        stream = True
-
-        # Override async method for this test
-        async def mock_run_async(*args, **kwargs):
-            mock_response = MagicMock()
-            mock_response.model_dump_json.return_value = '{"result": "success", "output": "Mock agent response"}'
-            return mock_response
-
-        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
-
-        result = await self.tool._arun(agent_id=agent_id, fields=fields, stream=stream)
 
         assert result == '{"result": "success", "output": "Mock agent response"}'
 
