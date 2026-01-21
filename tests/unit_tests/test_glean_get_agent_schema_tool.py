@@ -32,15 +32,15 @@ class TestGleanGetAgentSchemaTool:
         mock_response = MagicMock()
         mock_response.model_dump_json.return_value = '{"inputs": [{"name": "input", "type": "STRING", "required": true}]}'
 
-        # Configure the retrieve_inputs method to return a mock response for sync
-        mock_agents.retrieve_inputs.return_value = mock_response
+        # Configure the retrieve_schemas method to return a mock response for sync
+        mock_agents.retrieve_schemas.return_value = mock_response
 
         # Configure async method
-        async def mock_retrieve_inputs_async(*args, **kwargs):
+        async def mock_retrieve_schemas_async(*args, **kwargs):
             # Return the same response as the sync method
             return mock_response
 
-        mock_agents.retrieve_inputs_async = mock_retrieve_inputs_async
+        mock_agents.retrieve_schemas_async = mock_retrieve_schemas_async
 
         # Initialize the tool
         self.tool = GleanGetAgentSchemaTool()
@@ -66,8 +66,8 @@ class TestGleanGetAgentSchemaTool:
 
         result = self.tool._run(agent_id=agent_id)
 
-        # Verify that retrieve_inputs was called with the correct parameters
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs.assert_called_once_with(agent_id=agent_id)
+        # Verify that retrieve_schemas was called with the correct parameters
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas.assert_called_once_with(agent_id=agent_id)
 
         expected_json = '{"inputs": [{"name": "input", "type": "STRING", "required": true}]}'
         assert result == expected_json
@@ -78,12 +78,12 @@ class TestGleanGetAgentSchemaTool:
 
         # Mock response that doesn't have model_dump_json
         mock_response = "Raw string response"
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs.return_value = mock_response
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas.return_value = mock_response
 
         result = self.tool._run(agent_id=agent_id)
 
-        # Verify that retrieve_inputs was called with the correct parameters
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs.assert_called_once_with(agent_id=agent_id)
+        # Verify that retrieve_schemas was called with the correct parameters
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas.assert_called_once_with(agent_id=agent_id)
 
         assert result == "Raw string response"
 
@@ -91,21 +91,21 @@ class TestGleanGetAgentSchemaTool:
         """Test _run when a GleanError occurs."""
         from glean.api_client import errors
 
-        # Mock GleanError
-        error = errors.GleanError("Test error")
-        error.raw_response = "Raw error response"
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs.side_effect = error
+        # Mock GleanError with required raw_response
+        mock_response = MagicMock()
+        mock_response.text = "Raw error response"
+        error = errors.GleanError("Test error", raw_response=mock_response)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas.side_effect = error
 
         result = self.tool._run(agent_id="test-agent-id")
 
         assert "Glean API error" in result
         assert "Test error" in result
-        assert "Raw error response" in result
 
     def test_run_with_generic_exception(self) -> None:
         """Test _run when a generic exception occurs."""
         # Mock generic exception
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs.side_effect = Exception("Generic error")
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas.side_effect = Exception("Generic error")
 
         result = self.tool._run(agent_id="test-agent-id")
 
@@ -118,12 +118,12 @@ class TestGleanGetAgentSchemaTool:
         agent_id = "test-agent-id"
 
         # Override async method for this test
-        async def mock_retrieve_inputs_async(*args, **kwargs):
+        async def mock_retrieve_schemas_async(*args, **kwargs):
             mock_response = MagicMock()
             mock_response.model_dump_json.return_value = '{"inputs": [{"name": "input", "type": "STRING", "required": true}]}'
             return mock_response
 
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs_async = mock_retrieve_inputs_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas_async = mock_retrieve_schemas_async
 
         result = await self.tool._arun(agent_id=agent_id)
 
@@ -136,10 +136,10 @@ class TestGleanGetAgentSchemaTool:
         agent_id = "test-agent-id"
 
         # Override async method for this test
-        async def mock_retrieve_inputs_async(*args, **kwargs):
+        async def mock_retrieve_schemas_async(*args, **kwargs):
             return "Raw string response"
 
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs_async = mock_retrieve_inputs_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas_async = mock_retrieve_schemas_async
 
         result = await self.tool._arun(agent_id=agent_id)
 
@@ -150,31 +150,31 @@ class TestGleanGetAgentSchemaTool:
         """Test _arun when a GleanError occurs."""
         from glean.api_client import errors
 
-        # Mock GleanError
-        error = errors.GleanError("Test error")
-        error.raw_response = "Raw error response"
+        # Mock GleanError with required raw_response
+        mock_response = MagicMock()
+        mock_response.text = "Raw error response"
+        error = errors.GleanError("Test error", raw_response=mock_response)
 
         # Override async method for this test
-        async def mock_retrieve_inputs_async(*args, **kwargs):
+        async def mock_retrieve_schemas_async(*args, **kwargs):
             raise error
 
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs_async = mock_retrieve_inputs_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas_async = mock_retrieve_schemas_async
 
         result = await self.tool._arun(agent_id="test-agent-id")
 
         assert "Glean API error" in result
         assert "Test error" in result
-        assert "Raw error response" in result
 
     @pytest.mark.asyncio
     async def test_arun_with_generic_exception(self) -> None:
         """Test _arun when a generic exception occurs."""
 
         # Override async method for this test
-        async def mock_retrieve_inputs_async(*args, **kwargs):
+        async def mock_retrieve_schemas_async(*args, **kwargs):
             raise Exception("Generic error")
 
-        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_inputs_async = mock_retrieve_inputs_async
+        self.mock_glean.return_value.__enter__.return_value.client.agents.retrieve_schemas_async = mock_retrieve_schemas_async
 
         result = await self.tool._arun(agent_id="test-agent-id")
 

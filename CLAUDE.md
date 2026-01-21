@@ -74,6 +74,7 @@ langchain_glean/
 
 ## Dependencies
 
-- `glean-api-client>=0.6,<0.7` - Glean Python SDK
-- `langchain-core>=0.3.45` - LangChain core abstractions
+See `pyproject.toml` for current dependency versions. Key dependencies:
+- `glean-api-client` - Glean Python SDK
+- `langchain-core` - LangChain core abstractions
 - Python 3.9+

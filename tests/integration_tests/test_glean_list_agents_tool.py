@@ -39,7 +39,7 @@ class TestGleanListAgentsToolIntegration(unittest.TestCase):
                 # If there are agents, check they have the expected structure
                 if agents_json["agents"]:
                     agent = agents_json["agents"][0]
-                    self.assertIn("id", agent)
+                    self.assertIn("agent_id", agent)
                     self.assertIn("name", agent)
 
         except json.JSONDecodeError:
@@ -64,7 +64,7 @@ class TestGleanListAgentsToolIntegration(unittest.TestCase):
                 # If there are agents, check they have the expected structure
                 if agents_json["agents"]:
                     agent = agents_json["agents"][0]
-                    self.assertIn("id", agent)
+                    self.assertIn("agent_id", agent)
                     self.assertIn("name", agent)
 
         except json.JSONDecodeError:
@@ -83,11 +83,11 @@ class TestGleanListAgentsToolIntegration(unittest.TestCase):
             # If there are agents, check they all have required fields
             if "agents" in agents_json and agents_json["agents"]:
                 for agent in agents_json["agents"]:
-                    self.assertIn("id", agent)
+                    self.assertIn("agent_id", agent)
                     self.assertIn("name", agent)
 
                     # ID should be a string
-                    self.assertIsInstance(agent["id"], str)
+                    self.assertIsInstance(agent["agent_id"], str)
 
                     # Name should be a string
                     self.assertIsInstance(agent["name"], str)

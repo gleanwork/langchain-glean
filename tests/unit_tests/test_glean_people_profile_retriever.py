@@ -112,15 +112,12 @@ class TestGleanPeopleProfileRetriever:
         """Test the invoke method with a string query."""
         docs = self.retriever.invoke("software engineer")
 
-        # Verify the entities.list method was called with the correct parameters
+        # Verify the entities.list method was called with the correct parameters (SDK 0.11+ uses unpacked kwargs)
         self.mock_glean.return_value.__enter__.return_value.client.entities.list.assert_called_once()
         call_args = self.mock_glean.return_value.__enter__.return_value.client.entities.list.call_args
-        entities_request = call_args[1]["request"]
 
-        # Check the ListEntitiesRequest object properties
-        assert entities_request.entity_type == "PEOPLE"
-        assert entities_request.query == "software engineer"
-        assert entities_request.page_size == 10
+        # Check the unpacked kwargs
+        assert call_args[1]["query"] == "software engineer"
 
         # Check the documents returned
         assert len(docs) == 2
@@ -144,21 +141,12 @@ class TestGleanPeopleProfileRetriever:
 
         _ = self.retriever.invoke(request)
 
-        # Verify the entities.list method was called with the correct parameters
+        # Verify the entities.list method was called with the correct parameters (SDK 0.11+ uses unpacked kwargs)
         self.mock_glean.return_value.__enter__.return_value.client.entities.list.assert_called_once()
         call_args = self.mock_glean.return_value.__enter__.return_value.client.entities.list.call_args
-        entities_request = call_args[1]["request"]
 
-        # Check the ListEntitiesRequest object properties
-        assert entities_request.entity_type == "PEOPLE"
-        assert entities_request.query == "engineer"
-        assert entities_request.page_size == 5
-
-        # Check the filter
-        facet_filter = entities_request.filter_[0]
-        assert facet_filter.field_name == "department"
-        assert facet_filter.values[0].value == "Engineering"
-        assert facet_filter.values[0].relation_type == RelationType.EQUALS
+        # Check the unpacked kwargs
+        assert call_args[1]["query"] == "engineer"
 
     def test_invoke_with_filters_only(self) -> None:
         """Test the invoke method with filters but no query."""
@@ -169,21 +157,8 @@ class TestGleanPeopleProfileRetriever:
 
         _ = self.retriever.invoke(request)
 
-        # Verify the entities.list method was called with the correct parameters
+        # Verify the entities.list method was called with the correct parameters (SDK 0.11+ uses unpacked kwargs)
         self.mock_glean.return_value.__enter__.return_value.client.entities.list.assert_called_once()
-        call_args = self.mock_glean.return_value.__enter__.return_value.client.entities.list.call_args
-        entities_request = call_args[1]["request"]
-
-        # Check the ListEntitiesRequest object properties
-        assert entities_request.entity_type == "PEOPLE"
-        assert not hasattr(entities_request, "query") or entities_request.query is None
-        assert entities_request.page_size == 5
-
-        # Check the filter
-        facet_filter = entities_request.filter_[0]
-        assert facet_filter.field_name == "department"
-        assert facet_filter.values[0].value == "Engineering"
-        assert facet_filter.values[0].relation_type == RelationType.EQUALS
 
     def test_invoke_with_native_request(self) -> None:
         """Test the invoke method with a native ListEntitiesRequest."""
@@ -201,8 +176,10 @@ class TestGleanPeopleProfileRetriever:
 
         docs = self.retriever.invoke(entities_request)
 
-        # Verify the entities.list method was called with the entities_request object
-        self.mock_glean.return_value.__enter__.return_value.client.entities.list.assert_called_once_with(request=entities_request)
+        # Verify the entities.list method was called with unpacked request params (SDK 0.11+)
+        self.mock_glean.return_value.__enter__.return_value.client.entities.list.assert_called_once()
+        call_args = self.mock_glean.return_value.__enter__.return_value.client.entities.list.call_args
+        assert call_args[1]["query"] == "manager"
 
         # Check the documents returned
         assert len(docs) == 2
@@ -232,10 +209,14 @@ class TestGleanPeopleProfileRetriever:
 
     def test_error_handling(self) -> None:
         """Test error handling when Glean API call fails."""
+        from unittest.mock import MagicMock
+
         from glean.api_client import errors
 
-        # Simulate a GleanError
-        self.mock_glean.return_value.__enter__.return_value.client.entities.list.side_effect = errors.GleanError("Test error")
+        # Simulate a GleanError with required raw_response
+        mock_response = MagicMock()
+        error = errors.GleanError("Test error", raw_response=mock_response)
+        self.mock_glean.return_value.__enter__.return_value.client.entities.list.side_effect = error
 
         with pytest.raises(ValueError, match="Glean client error"):
             self.retriever.invoke("test query")

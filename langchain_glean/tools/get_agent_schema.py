@@ -22,7 +22,7 @@ class GleanGetAgentSchemaTool(GleanAPIClientMixin, BaseTool):
     def _run(self, agent_id: str, **kwargs: Any) -> str:  # noqa: D401
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
-                response = g.client.agents.retrieve_inputs(agent_id=agent_id)
+                response = g.client.agents.retrieve_schemas(agent_id=agent_id)
 
             if hasattr(response, "model_dump_json"):
                 return response.model_dump_json(indent=2)
@@ -39,7 +39,7 @@ class GleanGetAgentSchemaTool(GleanAPIClientMixin, BaseTool):
     async def _arun(self, agent_id: str, **kwargs: Any) -> str:  # noqa: D401
         try:
             with Glean(api_token=self.api_token, instance=self.instance) as g:
-                response = await g.client.agents.retrieve_inputs_async(agent_id=agent_id)
+                response = await g.client.agents.retrieve_schemas_async(agent_id=agent_id)
 
             if hasattr(response, "model_dump_json"):
                 return response.model_dump_json(indent=2)

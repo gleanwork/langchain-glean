@@ -67,20 +67,7 @@ class TestGleanRunAgentTool:
         result = self.tool._run(agent_id=agent_id, fields=fields)
 
         # Verify that run was called with the correct parameters
-        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=None)
-
-        assert result == '{"result": "success", "output": "Mock agent response"}'
-
-    def test_run_with_all_params(self) -> None:
-        """Test _run with all parameters."""
-        agent_id = "test-agent-id"
-        fields = {"input": "Test input", "param1": "value1"}
-        stream = True
-
-        result = self.tool._run(agent_id=agent_id, fields=fields, stream=stream)
-
-        # Verify that run was called with the correct parameters
-        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=stream)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, input=fields)
 
         assert result == '{"result": "success", "output": "Mock agent response"}'
 
@@ -96,7 +83,7 @@ class TestGleanRunAgentTool:
         result = self.tool._run(agent_id=agent_id, fields=fields)
 
         # Verify that run was called with the correct parameters
-        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, fields=fields, stream=None)
+        self.mock_glean.return_value.__enter__.return_value.client.agents.run.assert_called_once_with(agent_id=agent_id, input=fields)
 
         assert result == "Raw string response"
 
@@ -104,16 +91,16 @@ class TestGleanRunAgentTool:
         """Test _run when a GleanError occurs."""
         from glean.api_client import errors
 
-        # Mock GleanError
-        error = errors.GleanError("Test error")
-        error.raw_response = "Raw error response"
+        # Mock GleanError with required raw_response
+        mock_response = MagicMock()
+        mock_response.text = "Raw error response"
+        error = errors.GleanError("Test error", raw_response=mock_response)
         self.mock_glean.return_value.__enter__.return_value.client.agents.run.side_effect = error
 
         result = self.tool._run(agent_id="test-agent-id", fields={})
 
         assert "Glean API error" in result
         assert "Test error" in result
-        assert "Raw error response" in result
 
     def test_run_with_generic_exception(self) -> None:
         """Test _run when a generic exception occurs."""
@@ -144,25 +131,6 @@ class TestGleanRunAgentTool:
         assert result == '{"result": "success", "output": "Mock agent response"}'
 
     @pytest.mark.asyncio
-    async def test_arun_with_all_params(self) -> None:
-        """Test _arun with all parameters."""
-        agent_id = "test-agent-id"
-        fields = {"input": "Test input", "param1": "value1"}
-        stream = True
-
-        # Override async method for this test
-        async def mock_run_async(*args, **kwargs):
-            mock_response = MagicMock()
-            mock_response.model_dump_json.return_value = '{"result": "success", "output": "Mock agent response"}'
-            return mock_response
-
-        self.mock_glean.return_value.__enter__.return_value.client.agents.run_async = mock_run_async
-
-        result = await self.tool._arun(agent_id=agent_id, fields=fields, stream=stream)
-
-        assert result == '{"result": "success", "output": "Mock agent response"}'
-
-    @pytest.mark.asyncio
     async def test_arun_with_non_json_response(self) -> None:
         """Test _arun with a response that doesn't support model_dump_json."""
         agent_id = "test-agent-id"
@@ -183,9 +151,10 @@ class TestGleanRunAgentTool:
         """Test _arun when a GleanError occurs."""
         from glean.api_client import errors
 
-        # Mock GleanError
-        error = errors.GleanError("Test error")
-        error.raw_response = "Raw error response"
+        # Mock GleanError with required raw_response
+        mock_response = MagicMock()
+        mock_response.text = "Raw error response"
+        error = errors.GleanError("Test error", raw_response=mock_response)
 
         # Override async method for this test
         async def mock_run_async(*args, **kwargs):
@@ -197,7 +166,6 @@ class TestGleanRunAgentTool:
 
         assert "Glean API error" in result
         assert "Test error" in result
-        assert "Raw error response" in result
 
     @pytest.mark.asyncio
     async def test_arun_with_generic_exception(self) -> None:

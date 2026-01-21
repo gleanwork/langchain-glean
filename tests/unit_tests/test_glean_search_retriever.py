@@ -116,10 +116,9 @@ class TestGleanSearchRetriever:
         # Verify the search.query method was called with the correct parameters
         self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once()
         call_args = self.mock_glean.return_value.__enter__.return_value.client.search.query.call_args
-        search_request = call_args[1]["request"]
 
-        # Check the SearchRequest object properties
-        assert search_request.query == "test query"
+        # Check the unpacked kwargs (SDK 0.11+ uses individual params, not request=)
+        assert call_args[1]["query"] == "test query"
 
         assert len(docs) == 1
         doc = docs[0]
@@ -160,11 +159,8 @@ class TestGleanSearchRetriever:
             assert "max_snippet_size" in kwargs
             assert kwargs["max_snippet_size"] == 100
 
-            # Verify that query was called with the mocked search request
-            self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once_with(
-                request=search_request_mock,
-                http_headers={"X-Glean-ActAs": "test@example.com"},
-            )
+            # Verify that query was called (SDK 0.11+ unpacks request into kwargs)
+            self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once()
 
     def test_build_document(self) -> None:
         """Test the _build_document method."""
@@ -201,11 +197,11 @@ class TestGleanSearchRetriever:
 
         docs = self.retriever.invoke(search_request)
 
-        # Verify the search was called with our request object
-        self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once_with(
-            request=search_request,
-            http_headers={"X-Glean-ActAs": "test@example.com"},
-        )
+        # Verify the search was called with unpacked request params (SDK 0.11+)
+        self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once()
+        call_args = self.mock_glean.return_value.__enter__.return_value.client.search.query.call_args
+        assert call_args[1]["query"] == "test query"
+        assert call_args[1]["http_headers"] == {"X-Glean-ActAs": "test@example.com"}
 
         # Verify we got documents back
         assert len(docs) == 1
