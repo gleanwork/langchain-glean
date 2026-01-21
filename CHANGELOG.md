@@ -1,3 +1,14 @@
+## v0.3.4 (2026-01-21)
+
+### Fix
+
+- Use vars() instead of model_dump() for Speakeasy SDK models
+- Update SDK method calls for glean-api-client 0.11.x
+
+### Refactor
+
+- Remove unused stream parameter from GleanRunAgentTool
+
 ## v0.3.3 (2025-07-18)
 
 ### Fix
