@@ -10,21 +10,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Setup (install mise first: curl https://mise.run | sh)
-mise install && task setup
+mise install && mise run setup
 
 # Testing
-task test              # Run unit tests (network disabled)
-task test:watch        # Run tests in watch mode
-task test:integration  # Run integration tests (requires credentials)
-task test:all          # Run all tests + lint fixes + mypy
+mise run test              # Run unit tests (network disabled)
+mise run test:watch        # Run tests in watch mode
+mise run test:integration  # Run integration tests (requires credentials)
+mise run test:all          # Run all tests + lint fixes + mypy
 
 # Linting
-task lint              # Run all linters (ruff + format check + mypy)
-task lint:fix          # Auto-fix lint issues and format code
+mise run lint              # Run all linters (ruff + format check + mypy)
+mise run lint:fix          # Auto-fix lint issues and format code
 
 # Release (maintainers only)
-task release DRY_RUN=true  # Preview version bump
-task release               # Bump version, update CHANGELOG.md, create tag
+DRY_RUN=true mise run release  # Preview version bump
+mise run release               # Bump version, update CHANGELOG.md, create tag
 ```
 
 Run a single test with: `uv run pytest tests/unit_tests/test_glean_search_retriever.py::TestGleanSearchRetriever::test_init -v`
