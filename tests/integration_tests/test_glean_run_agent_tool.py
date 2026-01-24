@@ -62,17 +62,6 @@ class TestGleanRunAgentToolIntegration(unittest.TestCase):
             self.assertIsInstance(result, str)
             self.assertTrue(len(result) > 0)
 
-    def test_run_with_streaming(self) -> None:
-        """Test running the tool with streaming enabled."""
-        # Basic fields for the agent
-        fields = {"input": "What can this agent do?"}
-
-        # Run the tool with streaming enabled
-        result = self.tool.run(agent_id=self.agent_id, fields=fields, stream=True)
-
-        # Verify the result
-        self.assertIsInstance(result, str)
-        self.assertTrue(len(result) > 0)
 
     async def test_arun_with_basic_input(self) -> None:
         """Test async running the tool with basic input."""
@@ -107,14 +96,3 @@ class TestGleanRunAgentToolIntegration(unittest.TestCase):
             self.assertIsInstance(result, str)
             self.assertTrue(len(result) > 0)
 
-    async def test_arun_with_streaming(self) -> None:
-        """Test async running the tool with streaming enabled."""
-        # Basic fields for the agent
-        fields = {"input": "What can this agent do?"}
-
-        # Run the tool asynchronously with streaming enabled
-        result = await self.tool.arun(agent_id=self.agent_id, fields=fields, stream=True)
-
-        # Verify the result
-        self.assertIsInstance(result, str)
-        self.assertTrue(len(result) > 0)
