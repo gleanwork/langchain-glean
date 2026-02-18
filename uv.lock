@@ -4,8 +4,7 @@ requires-python = ">=3.9, <4.0"
 resolution-markers = [
     "python_full_version >= '3.12.4'",
     "python_full_version >= '3.10' and python_full_version < '3.12.4'",
-    "python_full_version >= '3.9.2' and python_full_version < '3.10'",
-    "python_full_version < '3.9.2'",
+    "python_full_version < '3.10'",
 ]
 
 [[package]]
@@ -254,97 +253,37 @@ wheels = [
 
 [[package]]
 name = "glean-api-client"
-version = "0.11.22"
+version = "0.6.6"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.9.2'",
-]
 dependencies = [
-    { name = "httpx", marker = "python_full_version < '3.9.2'" },
-    { name = "pydantic", marker = "python_full_version < '3.9.2'" },
+    { name = "httpx" },
+    { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fd/d3/9fcb0a5e87219b1775ae63cea697822b1874c983484c849d968345a2a359/glean_api_client-0.11.22.tar.gz", hash = "sha256:66794baf24c02b8fbe34c56e5e18e658fdc2886562423aa0eaf13c40c455bf2d", size = 233486, upload-time = "2025-11-24T21:12:55.572Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/99/da764595c6c8a649b64eace71d7f75ff6fe610a65b7d26a82f8a339e75ef/glean_api_client-0.6.6.tar.gz", hash = "sha256:77f8292781caf1576119549ed5b8832108b21b97b5d399becf37b7a9a99af5a2", size = 219942, upload-time = "2025-06-16T19:08:16.328Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/55/06/8a4052cadc2f4969df9e8db8fada1d7d7baa04db4d2052e7cf13c66237d9/glean_api_client-0.11.22-py3-none-any.whl", hash = "sha256:96f25f59dbf4b69c7556dbf79e906238736748cad1d9b8727518c04e41b17f16", size = 488809, upload-time = "2025-11-24T21:12:54.122Z" },
-]
-
-[[package]]
-name = "glean-api-client"
-version = "0.11.27"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.12.4'",
-    "python_full_version >= '3.10' and python_full_version < '3.12.4'",
-    "python_full_version >= '3.9.2' and python_full_version < '3.10'",
-]
-dependencies = [
-    { name = "httpcore", version = "1.0.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9.2'" },
-    { name = "httpx", marker = "python_full_version >= '3.9.2'" },
-    { name = "pydantic", marker = "python_full_version >= '3.9.2'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/78/66/f126d05f1895be6416b490174d961b46771a45fe288b891fd05ed714c7ee/glean_api_client-0.11.27.tar.gz", hash = "sha256:a013497ea15fbeba0c22ae7a8b3022851add593f84078c170e55301c68a89984", size = 253931, upload-time = "2026-01-16T23:41:45.894Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/18/7d/d359d2b19c134df123e1a70d859836fa516f01b0fe1a46ec23f6302e116b/glean_api_client-0.11.27-py3-none-any.whl", hash = "sha256:c72e152a4be7060f49e1ac848a0c53073ae6ce4b5281e09ca17e81b7227a9600", size = 586855, upload-time = "2026-01-16T23:41:44.084Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/19/67756bb340354ede358fabff2d7793153a16f8ae20a1025e7ef5f0ba8e5f/glean_api_client-0.6.6-py3-none-any.whl", hash = "sha256:88caf5120fc25e00770739874ed3b6236fd6aa5866cd5c74e9d6258fbeefa32a", size = 463201, upload-time = "2025-06-16T19:08:14.837Z" },
 ]
 
 [[package]]
 name = "h11"
 version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.9.2'",
-]
 sdist = { url = "https://files.pythonhosted.org/packages/f5/38/3af3d3633a34a3316095b39c8e8fb4853a28a536e55d347bd8d8e9a14b03/h11-0.14.0.tar.gz", hash = "sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d", size = 100418, upload-time = "2022-09-25T15:40:01.519Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/95/04/ff642e65ad6b90db43e668d70ffb6736436c7ce41fcc549f4e9472234127/h11-0.14.0-py3-none-any.whl", hash = "sha256:e3fe4ac4b851c468cc8363d500db52c2ead036020723024a109d37346efaa761", size = 58259, upload-time = "2022-09-25T15:39:59.68Z" },
 ]
 
 [[package]]
-name = "h11"
-version = "0.16.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.12.4'",
-    "python_full_version >= '3.10' and python_full_version < '3.12.4'",
-    "python_full_version >= '3.9.2' and python_full_version < '3.10'",
-]
-sdist = { url = "https://files.pythonhosted.org/packages/01/ee/02a2c011bdab74c6fb3c75474d40b3052059d95df7e73351460c8588d963/h11-0.16.0.tar.gz", hash = "sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1", size = 101250, upload-time = "2025-04-24T03:35:25.427Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl", hash = "sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86", size = 37515, upload-time = "2025-04-24T03:35:24.344Z" },
-]
-
-[[package]]
 name = "httpcore"
 version = "1.0.7"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.9.2'",
-]
 dependencies = [
-    { name = "certifi", marker = "python_full_version < '3.9.2'" },
-    { name = "h11", version = "0.14.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9.2'" },
+    { name = "certifi" },
+    { name = "h11" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6a/41/d7d0a89eb493922c37d343b607bc1b5da7f5be7e383740b4753ad8943e90/httpcore-1.0.7.tar.gz", hash = "sha256:8551cb62a169ec7162ac7be8d4817d561f60e08eaa485234898414bb5a8a0b4c", size = 85196, upload-time = "2024-11-15T12:30:47.531Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/f5/72347bc88306acb359581ac4d52f23c0ef445b57157adedb9aee0cd689d2/httpcore-1.0.7-py3-none-any.whl", hash = "sha256:a3fff8f43dc260d5bd363d9f9cf1830fa3a458b332856f34282de498ed420edd", size = 78551, upload-time = "2024-11-15T12:30:45.782Z" },
-]
-
-[[package]]
-name = "httpcore"
-version = "1.0.9"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.12.4'",
-    "python_full_version >= '3.10' and python_full_version < '3.12.4'",
-    "python_full_version >= '3.9.2' and python_full_version < '3.10'",
-]
-dependencies = [
-    { name = "certifi", marker = "python_full_version >= '3.9.2'" },
-    { name = "h11", version = "0.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9.2'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/06/94/82699a10bca87a5556c9c59b5963f2d039dbd239f25bc2a63907a05a14cb/httpcore-1.0.9.tar.gz", hash = "sha256:6e34463af53fd2ab5d807f399a9b45ea31c3dfa2276f15a2c3f00afff6e176e8", size = 85484, upload-time = "2025-04-24T22:06:22.219Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl", hash = "sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55", size = 78784, upload-time = "2025-04-24T22:06:20.566Z" },
 ]
 
 [[package]]
@@ -354,8 +293,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "certifi" },
-    { name = "httpcore", version = "1.0.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9.2'" },
-    { name = "httpcore", version = "1.0.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9.2'" },
+    { name = "httpcore" },
     { name = "idna" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
@@ -449,8 +387,7 @@ name = "langchain-glean"
 version = "0.3.3"
 source = { editable = "." }
 dependencies = [
-    { name = "glean-api-client", version = "0.11.22", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9.2'" },
-    { name = "glean-api-client", version = "0.11.27", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9.2'" },
+    { name = "glean-api-client" },
     { name = "langchain-core" },
 ]
 
@@ -481,7 +418,7 @@ typing = [
 requires-dist = [
     { name = "codespell", marker = "extra == 'codespell'", specifier = ">=2.2.6" },
     { name = "commitizen", marker = "extra == 'dev'", specifier = ">=4.4.1" },
-    { name = "glean-api-client", specifier = ">=0.11,<0.12" },
+    { name = "glean-api-client", specifier = ">=0.6,<0.7" },
     { name = "langchain-core", specifier = ">=0.3.45" },
     { name = "langchain-tests", marker = "extra == 'test'", specifier = ">=0.3.5" },
     { name = "mypy", marker = "extra == 'typing'", specifier = ">=1.10" },
@@ -658,8 +595,7 @@ name = "numpy"
 version = "2.0.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.9.2' and python_full_version < '3.10'",
-    "python_full_version < '3.9.2'",
+    "python_full_version < '3.10'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a9/75/10dd1f8116a8b796cb2c737b674e02d02e80454bda953fa7e65d8c12b016/numpy-2.0.2.tar.gz", hash = "sha256:883c987dee1880e2a864ab0dc9892292582510604156762362d9326444636e78", size = 18902015, upload-time = "2024-08-26T20:19:40.945Z" }
 wheels = [

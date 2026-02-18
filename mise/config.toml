@@ -1,7 +1,7 @@
 [env]
 PROJECT_NAME = "{{ cwd | basename }}"
+_.file = ".env"
 
 [tools]
 python = "{{ get_env(name='PYTHON_VERSION', default='3.10') }}"
-task = "3.44"
 uv = "0.8"
