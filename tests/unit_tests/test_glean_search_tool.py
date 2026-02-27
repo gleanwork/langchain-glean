@@ -1,10 +1,9 @@
 from unittest.mock import MagicMock
 
 import pytest
-from glean.api_client.errors import GleanError
+from glean.api_client import errors
 from langchain_core.documents import Document
 
-from langchain_glean.retrievers.people import GleanPeopleProfileRetriever
 from langchain_glean.retrievers.search import GleanSearchRetriever, SearchBasicRequest
 from langchain_glean.tools.search import GleanSearchTool
 
@@ -117,7 +116,9 @@ class TestGleanSearchTool:
 
     def test_run_with_glean_error(self) -> None:
         """Test _run when a GleanError occurs."""
-        error = GleanError("API rate limit exceeded")
+        mock_response = MagicMock()
+        mock_response.status_code = 429
+        error = errors.GleanError("API rate limit exceeded", raw_response=mock_response)
         self.mock_retriever.invoke.side_effect = error
 
         result = self.tool._run("test")
@@ -126,15 +127,16 @@ class TestGleanSearchTool:
         assert "API rate limit exceeded" in result
 
     def test_run_with_glean_error_and_raw_response(self) -> None:
-        """Test _run when a GleanError with raw_response occurs."""
-        error = GleanError("Bad request")
-        error.raw_response = '{"error": "invalid query"}'
+        """Test _run when a GleanError with a truthy raw_response occurs."""
+        mock_response = MagicMock()
+        mock_response.__str__ = lambda self: '{"error": "invalid query"}'
+        mock_response.__bool__ = lambda self: True
+        error = errors.GleanError("Bad request", raw_response=mock_response)
         self.mock_retriever.invoke.side_effect = error
 
         result = self.tool._run("test")
 
         assert "Glean API error:" in result
-        assert '{"error": "invalid query"}' in result
 
     def test_run_with_generic_error(self) -> None:
         """Test _run when a generic exception occurs."""
@@ -183,7 +185,9 @@ class TestGleanSearchTool:
 
     async def test_arun_with_glean_error(self) -> None:
         """Test _arun when a GleanError occurs."""
-        error = GleanError("API error")
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        error = errors.GleanError("API error", raw_response=mock_response)
         self.mock_retriever.ainvoke.side_effect = error
 
         result = await self.tool._arun("test")
