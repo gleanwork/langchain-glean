@@ -291,3 +291,215 @@ class TestGleanChatModel:
             assert kwargs["timeout_millis"] == 30000
             assert kwargs["inclusions"]["url_patterns"] == ["https://glean.com/*"]
             assert kwargs["exclusions"]["url_patterns"] == ["https://glean.com/blog/*"]
+
+    # ===== PROPERTY TESTS =====
+
+    def test_llm_type(self):
+        """Test the _llm_type property."""
+        assert self.chat_model._llm_type == "glean-chat"
+
+    def test_chat_id_property(self):
+        """Test the chat_id getter and setter."""
+        assert self.chat_model.chat_id is None
+
+        self.chat_model.chat_id = "test-chat-id"
+        assert self.chat_model.chat_id == "test-chat-id"
+
+        self.chat_model.chat_id = None
+        assert self.chat_model.chat_id is None
+
+    # ===== MESSAGE CONVERSION TESTS =====
+
+    def test_convert_chat_message_user_role(self):
+        """Test converting a ChatMessage with USER role."""
+        from langchain_core.messages import ChatMessage as LCChatMessage
+
+        msg = LCChatMessage(content="User chat message", role="user")
+        glean_msg = self.chat_model._convert_message_to_glean_format(msg)
+        assert glean_msg.author == "USER"
+        assert glean_msg.message_type == "CONTENT"
+        assert glean_msg.fragments[0].text == "User chat message"
+
+    def test_convert_chat_message_assistant_role(self):
+        """Test converting a ChatMessage with ASSISTANT role."""
+        from langchain_core.messages import ChatMessage as LCChatMessage
+
+        msg = LCChatMessage(content="AI chat message", role="assistant")
+        glean_msg = self.chat_model._convert_message_to_glean_format(msg)
+        assert glean_msg.author == "GLEAN_AI"
+
+    def test_convert_chat_message_ai_role(self):
+        """Test converting a ChatMessage with AI role."""
+        from langchain_core.messages import ChatMessage as LCChatMessage
+
+        msg = LCChatMessage(content="AI chat message", role="ai")
+        glean_msg = self.chat_model._convert_message_to_glean_format(msg)
+        assert glean_msg.author == "GLEAN_AI"
+
+    def test_convert_chat_message_unknown_role(self):
+        """Test converting a ChatMessage with an unknown role defaults to USER."""
+        from langchain_core.messages import ChatMessage as LCChatMessage
+
+        msg = LCChatMessage(content="Unknown role message", role="moderator")
+        glean_msg = self.chat_model._convert_message_to_glean_format(msg)
+        assert glean_msg.author == "USER"
+
+    # ===== MESSAGES FROM CHAT INPUT TESTS =====
+
+    def test_messages_from_chat_input_with_context(self):
+        """Test _messages_from_chat_input converts context to SystemMessage."""
+        request = ChatBasicRequest(
+            message="What is Glean?",
+            context=["Context line 1", "Context line 2"],
+        )
+        messages = self.chat_model._messages_from_chat_input(request)
+
+        assert len(messages) == 2
+        assert isinstance(messages[0], SystemMessage)
+        assert messages[0].content == "Context line 1\nContext line 2"
+        assert isinstance(messages[1], HumanMessage)
+        assert messages[1].content == "What is Glean?"
+
+    def test_messages_from_chat_input_without_context(self):
+        """Test _messages_from_chat_input without context."""
+        request = ChatBasicRequest(message="Hello")
+        messages = self.chat_model._messages_from_chat_input(request)
+
+        assert len(messages) == 1
+        assert isinstance(messages[0], HumanMessage)
+        assert messages[0].content == "Hello"
+
+    # ===== ERROR HANDLING TESTS =====
+
+    def test_generate_with_stop_sequences(self):
+        """Test that providing stop sequences raises an error."""
+        with pytest.raises(ValueError) as exc_info:
+            self.chat_model._generate(self.messages, stop=["STOP"])
+        assert "stop sequences are not supported" in str(exc_info.value)
+
+    def test_generate_with_glean_error(self):
+        """Test error handling in _generate when GleanError is raised."""
+        from glean.api_client import errors
+
+        mock_response = MagicMock()
+        error = errors.GleanError("Test error", raw_response=mock_response)
+        self.mock_glean.return_value.__enter__.return_value.client.chat.create.side_effect = error
+
+        with (
+            patch("langchain_glean.chat_models.chat.models.ChatRequest"),
+            patch("langchain_glean.chat_models.chat.models.ChatMessage"),
+            patch("langchain_glean.chat_models.chat.models.AgentConfig"),
+        ):
+            with pytest.raises(ValueError, match="Glean client error"):
+                self.chat_model._generate(self.messages)
+
+    def test_generate_with_generic_exception(self):
+        """Test generic exception handling in _generate returns fallback."""
+        self.mock_glean.return_value.__enter__.return_value.client.chat.create.side_effect = Exception("Network error")
+
+        with (
+            patch("langchain_glean.chat_models.chat.models.ChatRequest"),
+            patch("langchain_glean.chat_models.chat.models.ChatMessage"),
+            patch("langchain_glean.chat_models.chat.models.AgentConfig"),
+        ):
+            result = self.chat_model._generate(self.messages)
+
+        assert len(result.generations) == 1
+        assert "(offline)" in result.generations[0].message.content
+
+    # ===== ASYNC TESTS =====
+
+    async def test_agenerate(self):
+        """Test async generating a response from the chat model."""
+        from types import SimpleNamespace
+
+        # Set up create_async as a proper coroutine
+        mock_message_dict = {"author": "GLEAN_AI", "messageType": "CONTENT", "fragments": [{"text": "Async mock response"}]}
+        mock_response = MagicMock()
+        mock_response.messages = [mock_message_dict]
+        mock_response.chatId = "async-chat-id"
+        mock_response.chatSessionTrackingToken = "async-token"
+
+        async def mock_create_async(*args, **kwargs):
+            return mock_response
+
+        self.mock_glean.return_value.__enter__.return_value.client.chat.create_async = mock_create_async
+
+        with (
+            patch("langchain_glean.chat_models.chat.models.ChatRequest"),
+            patch("langchain_glean.chat_models.chat.models.ChatMessage"),
+            patch("langchain_glean.chat_models.chat.models.AgentConfig"),
+            patch.object(self.chat_model, "_convert_glean_message_to_langchain") as mock_convert,
+        ):
+            mock_convert.return_value = AIMessage(content="Async mock response")
+
+            result = await self.chat_model._agenerate(self.messages)
+
+        assert len(result.generations) == 1
+        assert result.generations[0].message.content == "Async mock response"
+
+    async def test_agenerate_with_stop_sequences(self):
+        """Test that providing stop sequences raises an error in _agenerate."""
+        with pytest.raises(ValueError, match="stop sequences are not supported"):
+            await self.chat_model._agenerate(self.messages, stop=["STOP"])
+
+    async def test_agenerate_with_generic_exception(self):
+        """Test generic exception handling in _agenerate returns fallback."""
+
+        async def mock_create_async_error(*args, **kwargs):
+            raise Exception("Network error")
+
+        self.mock_glean.return_value.__enter__.return_value.client.chat.create_async = mock_create_async_error
+
+        with (
+            patch("langchain_glean.chat_models.chat.models.ChatRequest"),
+            patch("langchain_glean.chat_models.chat.models.ChatMessage"),
+            patch("langchain_glean.chat_models.chat.models.AgentConfig"),
+        ):
+            result = await self.chat_model._agenerate(self.messages)
+
+        assert len(result.generations) == 1
+        assert "(offline)" in result.generations[0].message.content
+
+    # ===== STREAMING TESTS =====
+
+    def test_stream(self):
+        """Test synchronous streaming response."""
+        with (
+            patch("langchain_glean.chat_models.chat.models.ChatRequest") as mock_request_cls,
+            patch("langchain_glean.chat_models.chat.models.ChatMessage"),
+            patch("langchain_glean.chat_models.chat.models.AgentConfig"),
+        ):
+            mock_request = MagicMock()
+            mock_request_cls.return_value = mock_request
+
+            chunks = list(self.chat_model._stream(self.messages))
+
+        # The mock stream has 2 content chunks
+        assert len(chunks) >= 1
+        # Verify the chunks contain content
+        all_content = "".join(c.message.content for c in chunks)
+        assert len(all_content) > 0
+
+    def test_stream_with_stop_sequences(self):
+        """Test that stop sequences raise error in _stream."""
+        with pytest.raises(ValueError, match="stop sequences are not supported"):
+            list(self.chat_model._stream(self.messages, stop=["STOP"]))
+
+    # ===== INVOKE WITH STRING INPUT =====
+
+    def test_invoke_with_string_input(self):
+        """Test invoking with a plain string input."""
+        with patch.object(self.chat_model, "_generate") as mock_generate:
+            mock_result = MagicMock()
+            mock_result.generations = [MagicMock()]
+            mock_result.generations[0].message = AIMessage(content="String response")
+            mock_generate.return_value = mock_result
+
+            result = self.chat_model.invoke("Hello, Glean!")
+
+            mock_generate.assert_called_once()
+            args = mock_generate.call_args[0]
+            assert len(args[0]) == 1
+            assert isinstance(args[0][0], HumanMessage)
+            assert args[0][0].content == "Hello, Glean!"

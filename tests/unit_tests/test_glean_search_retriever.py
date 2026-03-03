@@ -12,7 +12,7 @@ from glean.api_client.models import (
 )
 from langchain_core.documents import Document
 
-from langchain_glean.retrievers.search import GleanSearchRetriever
+from langchain_glean.retrievers.search import GleanSearchRetriever, SearchBasicRequest
 
 
 class TestGleanSearchRetriever:
@@ -275,3 +275,115 @@ class TestGleanSearchRetriever:
 
         # Verify the search call
         self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once()
+
+    # ===== SearchBasicRequest TESTS =====
+
+    def test_search_basic_request_with_data_sources(self):
+        """Test SearchBasicRequest creates facet filters for data_sources."""
+        request = SearchBasicRequest(query="test", data_sources=["slack", "gmail"])
+        search_req = self.retriever._build_search_request(request)
+
+        assert search_req.query == "test"
+        assert search_req.request_options is not None
+        assert len(search_req.request_options.facet_filters) == 1
+        facet = search_req.request_options.facet_filters[0]
+        assert facet.field_name == "datasource"
+        assert len(facet.values) == 2
+
+    def test_search_basic_request_without_data_sources(self):
+        """Test SearchBasicRequest without data_sources sets no request_options."""
+        request = SearchBasicRequest(query="test")
+        search_req = self.retriever._build_search_request(request)
+
+        assert search_req.query == "test"
+
+    def test_search_basic_request_single_string_data_source(self):
+        """Test SearchBasicRequest._clean_data_sources accepts a single string."""
+        request = SearchBasicRequest(query="test", data_sources="confluence")
+        assert request.data_sources == ["confluence"]
+
+    def test_invoke_with_search_basic_request(self):
+        """Test invoking with a SearchBasicRequest object."""
+        request = SearchBasicRequest(query="test query", data_sources=["slack"])
+        docs = self.retriever.invoke(request)
+
+        self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once()
+        assert len(docs) == 1
+
+    # ===== ERROR HANDLING TESTS =====
+
+    def test_invoke_with_glean_error(self):
+        """Test invoke returns empty list when GleanError occurs."""
+        from glean.api_client import errors
+
+        mock_response = MagicMock()
+        error = errors.GleanError("Test error", raw_response=mock_response)
+        self.mock_glean.return_value.__enter__.return_value.client.search.query.side_effect = error
+
+        docs = self.retriever.invoke("test query")
+        assert docs == []
+
+    def test_invoke_with_generic_exception(self):
+        """Test invoke returns empty list when a generic exception occurs."""
+        self.mock_glean.return_value.__enter__.return_value.client.search.query.side_effect = Exception("Network error")
+
+        docs = self.retriever.invoke("test query")
+        assert docs == []
+
+    # ===== EDGE CASE TESTS =====
+
+    def test_invoke_with_empty_results(self):
+        """Test invoke returns empty list when search returns no results."""
+        mock_results = MagicMock()
+        mock_results.results = []
+        self.mock_glean.return_value.__enter__.return_value.client.search.query.return_value = mock_results
+
+        docs = self.retriever.invoke("test query")
+        assert docs == []
+
+    def test_invoke_with_none_results(self):
+        """Test invoke returns empty list when search returns None results."""
+        mock_results = MagicMock()
+        mock_results.results = None
+        self.mock_glean.return_value.__enter__.return_value.client.search.query.return_value = mock_results
+
+        docs = self.retriever.invoke("test query")
+        assert docs == []
+
+    def test_build_document_with_no_snippets(self):
+        """Test _build_document falls back to title when there are no snippets."""
+        result = SimpleNamespace(
+            tracking_token="token",
+            document=self.mock_document,
+            title="Fallback Title",
+            url="https://example.com/doc",
+            snippets=[],
+        )
+
+        doc = self.retriever._build_document(result)
+        assert doc.page_content == "Fallback Title"
+
+    def test_build_document_with_no_document_metadata(self):
+        """Test _build_document handles result with minimal document data."""
+        minimal_doc = SimpleNamespace(
+            id="doc-456",
+            datasource="gdrive",
+            doc_type="File",
+        )
+        result = SimpleNamespace(
+            tracking_token="token",
+            document=minimal_doc,
+            title="Minimal Doc",
+            url="https://example.com/minimal",
+            snippets=[SimpleNamespace(text="Some content")],
+        )
+
+        doc = self.retriever._build_document(result)
+        assert doc.page_content == "Some content"
+        assert doc.metadata["datasource"] == "gdrive"
+        assert doc.metadata["doc_type"] == "File"
+
+    def test_init_with_custom_k(self):
+        """Test initialization with a custom k value."""
+        retriever = GleanSearchRetriever(k=5)
+        assert retriever.k == 5
