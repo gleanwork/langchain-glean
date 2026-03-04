@@ -14,13 +14,11 @@ class GleanAPIClientMixin:  # noqa: D401
 
     server_url: Optional[str] = Field(
         default=None,
-        description="Full Glean backend URL (e.g. 'https://acme-be.glean.com'). "
-                    "Preferred over instance. Falls back to GLEAN_SERVER_URL env var.",
+        description="Full Glean backend URL (e.g. 'https://acme-be.glean.com'). Preferred over instance. Falls back to GLEAN_SERVER_URL env var.",
     )
     instance: str = Field(
         default="",
-        description="Glean instance/subdomain (e.g. 'acme'). "
-                    "Legacy — prefer server_url. Falls back to GLEAN_INSTANCE env var.",
+        description="Glean instance/subdomain (e.g. 'acme'). Legacy — prefer server_url. Falls back to GLEAN_INSTANCE env var.",
     )
     api_token: str = Field(description="Glean API token (user or global)")
     act_as: Optional[str] = Field(
