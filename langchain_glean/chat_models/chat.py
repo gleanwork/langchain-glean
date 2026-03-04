@@ -41,8 +41,9 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
 
             pip install -U langchain-glean
             export GLEAN_API_TOKEN="your-api-token"   # user or global token
-            export GLEAN_SERVER_URL="https://acme-be.glean.com"  # preferred
-            # OR legacy: export GLEAN_INSTANCE="acme"
+            export GLEAN_SERVER_URL="https://your-company-be.glean.com"  # full backend URL (preferred)
+            # Deprecated: GLEAN_INSTANCE is still supported as a fallback
+            # export GLEAN_INSTANCE="acme"
             export GLEAN_ACT_AS="user@example.com"    # only for global tokens
 
     Key init args
@@ -52,7 +53,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
     server_url : str, optional
         Full Glean backend URL (``GLEAN_SERVER_URL``). Preferred over instance.
     instance : str, optional
-        Glean instance / sub-domain (``GLEAN_INSTANCE``). Legacy — prefer server_url.
+        (Deprecated) Glean instance / sub-domain (``GLEAN_INSTANCE``). Use server_url instead.
     act_as : str, optional
         Email to impersonate when using a global token (``GLEAN_ACT_AS``).
     chat_id : str, optional
@@ -74,7 +75,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         from langchain_glean.chat_models import ChatGlean
 
         chat = ChatGlean()                      # reads env-vars
-        chat = ChatGlean(api_token="token", server_url="https://acme-be.glean.com")
+        chat = ChatGlean(api_token="token", server_url="https://your-company-be.glean.com")
 
     Invoke
     ------

@@ -40,14 +40,16 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
 
     Setup:
         Install ``langchain-glean`` and set environment variables
-        ``GLEAN_API_TOKEN`` and ``GLEAN_INSTANCE``. Optionally set ``GLEAN_ACT_AS``
+        ``GLEAN_API_TOKEN`` and ``GLEAN_SERVER_URL``. Optionally set ``GLEAN_ACT_AS``
         if using a global token.
 
         .. code-block:: bash
 
             pip install -U langchain-glean
             export GLEAN_API_TOKEN="your-api-token"  # Can be a global or user token
-            export GLEAN_INSTANCE="your-glean-subdomain"
+            export GLEAN_SERVER_URL="https://your-company-be.glean.com"  # full backend URL (preferred)
+            # Deprecated: GLEAN_INSTANCE is still supported as a fallback
+            # export GLEAN_INSTANCE="your-glean-subdomain"
             export GLEAN_ACT_AS="user@example.com"  # Only required for global tokens
 
     Example:
