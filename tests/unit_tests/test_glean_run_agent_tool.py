@@ -17,7 +17,7 @@ class TestGleanRunAgentTool:
         os.environ["GLEAN_API_TOKEN"] = "test-api-token"
 
         # Mock the Glean class where it's used directly in the tool
-        self.mock_glean_patcher = patch("langchain_glean.tools.run_agent.Glean")
+        self.mock_glean_patcher = patch("langchain_glean._api_client_mixin.Glean")
         self.mock_glean = self.mock_glean_patcher.start()
 
         # Mock the client property of the Glean instance

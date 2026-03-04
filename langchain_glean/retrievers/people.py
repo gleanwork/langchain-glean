@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
 
-from glean.api_client import Glean, errors, models
+from glean.api_client import errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
@@ -127,7 +127,7 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
     ) -> List[Document]:
         try:
             entities_req = self._build_entities_request(query, **kwargs)
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 # Use vars() instead of model_dump() due to SDK's custom serializer
                 params = {k: v for k, v in vars(entities_req).items() if not k.startswith("_") and v is not None}
                 response = g.client.entities.list(**params)
@@ -163,7 +163,7 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
     ) -> List[Document]:
         try:
             entities_req = self._build_entities_request(query, **kwargs)
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 # Use vars() instead of model_dump() due to SDK's custom serializer
                 params = {k: v for k, v in vars(entities_req).items() if not k.startswith("_") and v is not None}
                 response = await g.client.entities.list_async(**params)

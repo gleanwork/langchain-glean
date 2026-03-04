@@ -15,7 +15,7 @@ class TestGleanToolkit:
         os.environ["GLEAN_API_TOKEN"] = "test-token"
         os.environ["GLEAN_ACT_AS"] = "test@example.com"
 
-        with patch("langchain_glean.retrievers.people.Glean"), patch("langchain_glean.retrievers.search.Glean"):
+        with patch("langchain_glean._api_client_mixin.Glean"):
             tk = GleanToolkit()
             tools = tk.get_tools()
 

@@ -1,7 +1,7 @@
 # ruff: noqa: I001
 from typing import Any, Iterable, List, Optional, Union
 
-from glean.api_client import Glean, errors, models
+from glean.api_client import errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
@@ -129,7 +129,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                with Glean(api_token=self.api_token, instance=self.instance) as g:
+                with self._build_glean_client() as g:
                     headers = self._http_headers()
                     # Use vars() instead of model_dump() due to SDK's custom serializer
                     params = {k: v for k, v in vars(search_request).items() if not k.startswith("_") and v is not None}
@@ -180,7 +180,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                with Glean(api_token=self.api_token, instance=self.instance) as g:
+                with self._build_glean_client() as g:
                     headers = self._http_headers()
                     # Use vars() instead of model_dump() due to SDK's custom serializer
                     params = {k: v for k, v in vars(search_request).items() if not k.startswith("_") and v is not None}

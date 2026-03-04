@@ -27,7 +27,7 @@ class TestGleanSearchRetriever:
         os.environ["GLEAN_ACT_AS"] = "test@example.com"
 
         # Mock the Glean class where it's directly used
-        self.mock_glean_patcher = patch("langchain_glean.retrievers.search.Glean")
+        self.mock_glean_patcher = patch("langchain_glean._api_client_mixin.Glean")
         self.mock_glean = self.mock_glean_patcher.start()
 
         # Create mock search client
