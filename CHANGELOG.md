@@ -1,3 +1,13 @@
+## v0.4.0 (2026-03-05)
+
+### Feat
+
+- add server_url support with instance fallback (#33)
+
+### Refactor
+
+- migrate from go-task to native mise tasks (#25)
+
 ## v0.3.4 (2026-01-21)
 
 ### Fix
