@@ -20,7 +20,7 @@ class TestEndToEndWorkflows(unittest.TestCase):
 
         load_dotenv(override=True)
 
-        if not os.environ.get("GLEAN_INSTANCE") or not os.environ.get("GLEAN_API_TOKEN"):
+        if not (os.environ.get("GLEAN_SERVER_URL") or os.environ.get("GLEAN_INSTANCE")) or not os.environ.get("GLEAN_API_TOKEN"):
             self.skipTest("Glean credentials not found in environment variables")
 
     def test_search_to_chat_workflow(self) -> None:

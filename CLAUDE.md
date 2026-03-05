@@ -62,7 +62,7 @@ langchain_glean/
 
 ### Key Patterns
 
-- **GleanAPIClientMixin**: All components inherit from this mixin, which resolves `GLEAN_INSTANCE`, `GLEAN_API_TOKEN`, and `GLEAN_ACT_AS` from environment variables or constructor args.
+- **GleanAPIClientMixin**: All components inherit from this mixin, which resolves `GLEAN_SERVER_URL` (preferred) or `GLEAN_INSTANCE`, `GLEAN_API_TOKEN`, and `GLEAN_ACT_AS` from environment variables or constructor args. Use `_build_glean_client()` to create SDK clients.
 - **Async support**: Every retriever/tool exposes `ainvoke`, `astream` via the standard LangChain async interface.
 - **Message conversion**: `ChatGlean._convert_message_to_glean_format()` maps LangChain messages to Glean's `ChatMessage` format (author, message_type, fragments).
 
@@ -70,7 +70,7 @@ langchain_glean/
 
 - Unit tests mock the Glean SDK at the module boundary (e.g., `patch("langchain_glean.retrievers.search.Glean")`)
 - Network is disabled via `--disable-socket` for unit tests
-- Integration tests require real `GLEAN_API_TOKEN` and `GLEAN_INSTANCE` environment variables
+- Integration tests require real `GLEAN_API_TOKEN` and `GLEAN_SERVER_URL` (or `GLEAN_INSTANCE`) environment variables
 
 ## Dependencies
 

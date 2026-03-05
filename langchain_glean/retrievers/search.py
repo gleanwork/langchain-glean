@@ -1,7 +1,7 @@
 # ruff: noqa: I001
 from typing import Any, Iterable, List, Optional, Union
 
-from glean.api_client import Glean, errors, models
+from glean.api_client import errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
@@ -40,14 +40,16 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
 
     Setup:
         Install ``langchain-glean`` and set environment variables
-        ``GLEAN_API_TOKEN`` and ``GLEAN_INSTANCE``. Optionally set ``GLEAN_ACT_AS``
+        ``GLEAN_API_TOKEN`` and ``GLEAN_SERVER_URL``. Optionally set ``GLEAN_ACT_AS``
         if using a global token.
 
         .. code-block:: bash
 
             pip install -U langchain-glean
             export GLEAN_API_TOKEN="your-api-token"  # Can be a global or user token
-            export GLEAN_INSTANCE="your-glean-subdomain"
+            export GLEAN_SERVER_URL="https://your-company-be.glean.com"  # full backend URL (preferred)
+            # Deprecated: GLEAN_INSTANCE is still supported as a fallback
+            # export GLEAN_INSTANCE="your-glean-subdomain"
             export GLEAN_ACT_AS="user@example.com"  # Only required for global tokens
 
     Example:
@@ -129,7 +131,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                with Glean(api_token=self.api_token, instance=self.instance) as g:
+                with self._build_glean_client() as g:
                     headers = self._http_headers()
                     # Use vars() instead of model_dump() due to SDK's custom serializer
                     params = {k: v for k, v in vars(search_request).items() if not k.startswith("_") and v is not None}
@@ -180,7 +182,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             search_request = self._build_search_request(query, **kwargs)
 
             try:
-                with Glean(api_token=self.api_token, instance=self.instance) as g:
+                with self._build_glean_client() as g:
                     headers = self._http_headers()
                     # Use vars() instead of model_dump() due to SDK's custom serializer
                     params = {k: v for k, v in vars(search_request).items() if not k.startswith("_") and v is not None}

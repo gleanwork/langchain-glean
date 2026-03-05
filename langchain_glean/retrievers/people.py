@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
 
-from glean.api_client import Glean, errors, models
+from glean.api_client import errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
@@ -54,14 +54,16 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
 
     Setup:
         Install ``langchain-glean`` and set environment variables
-        ``GLEAN_API_TOKEN`` and ``GLEAN_INSTANCE``. Optionally set ``GLEAN_ACT_AS``
+        ``GLEAN_API_TOKEN`` and ``GLEAN_SERVER_URL``. Optionally set ``GLEAN_ACT_AS``
         if using a global token.
 
         .. code-block:: bash
 
             pip install -U langchain-glean
             export GLEAN_API_TOKEN="your-api-token"  # Can be a global or user token
-            export GLEAN_INSTANCE="your-glean-subdomain"
+            export GLEAN_SERVER_URL="https://your-company-be.glean.com"  # full backend URL (preferred)
+            # Deprecated: GLEAN_INSTANCE is still supported as a fallback
+            # export GLEAN_INSTANCE="your-glean-subdomain"
             export GLEAN_ACT_AS="user@example.com"  # Only required for global tokens
 
     Example:
@@ -127,7 +129,7 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
     ) -> List[Document]:
         try:
             entities_req = self._build_entities_request(query, **kwargs)
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 # Use vars() instead of model_dump() due to SDK's custom serializer
                 params = {k: v for k, v in vars(entities_req).items() if not k.startswith("_") and v is not None}
                 response = g.client.entities.list(**params)
@@ -163,7 +165,7 @@ class GleanPeopleProfileRetriever(GleanAPIClientMixin, BaseRetriever):
     ) -> List[Document]:
         try:
             entities_req = self._build_entities_request(query, **kwargs)
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 # Use vars() instead of model_dump() due to SDK's custom serializer
                 params = {k: v for k, v in vars(entities_req).items() if not k.startswith("_") and v is not None}
                 response = await g.client.entities.list_async(**params)

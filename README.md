@@ -27,9 +27,11 @@ pip install -U langchain-glean
 ### Environment variables
 
 ```bash
-export GLEAN_API_TOKEN="<your-token>"   # user or global token
-export GLEAN_INSTANCE="acme"            # Glean instance name
-export GLEAN_ACT_AS="user@acme.com"     # only for global tokens
+export GLEAN_API_TOKEN="<your-token>"              # user or global token
+export GLEAN_SERVER_URL="https://your-company-be.glean.com" # full backend URL (preferred)
+# Deprecated: GLEAN_INSTANCE is still supported as a fallback
+# export GLEAN_INSTANCE="acme"
+export GLEAN_ACT_AS="user@acme.com"                # only for global tokens
 ```
 
 ## Quick Start

@@ -1,6 +1,6 @@
 from typing import Any
 
-from glean.api_client import Glean, errors
+from glean.api_client import errors
 from langchain_core.tools import BaseTool
 
 from langchain_glean._api_client_mixin import GleanAPIClientMixin
@@ -14,7 +14,7 @@ class GleanListAgentsTool(GleanAPIClientMixin, BaseTool):
 
     def _run(self, **kwargs: Any) -> str:  # noqa: D401
         try:
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 response = g.client.agents.list()
 
             if hasattr(response, "model_dump_json"):
@@ -31,7 +31,7 @@ class GleanListAgentsTool(GleanAPIClientMixin, BaseTool):
 
     async def _arun(self, **kwargs: Any) -> str:  # noqa: D401
         try:
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 response = await g.client.agents.list_async()
 
             if hasattr(response, "model_dump_json"):

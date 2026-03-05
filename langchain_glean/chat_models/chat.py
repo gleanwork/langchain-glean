@@ -1,6 +1,6 @@
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union, cast
 
-from glean.api_client import Glean, errors, models  # noqa: F401
+from glean.api_client import errors, models
 from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
@@ -41,15 +41,19 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
 
             pip install -U langchain-glean
             export GLEAN_API_TOKEN="your-api-token"   # user or global token
-            export GLEAN_INSTANCE="acme"              # your Glean sub-domain
+            export GLEAN_SERVER_URL="https://your-company-be.glean.com"  # full backend URL (preferred)
+            # Deprecated: GLEAN_INSTANCE is still supported as a fallback
+            # export GLEAN_INSTANCE="acme"
             export GLEAN_ACT_AS="user@example.com"    # only for global tokens
 
     Key init args
     -------------
     api_token : str, optional
         Glean API token.  Falls back to ``GLEAN_API_TOKEN``.
+    server_url : str, optional
+        Full Glean backend URL (``GLEAN_SERVER_URL``). Preferred over instance.
     instance : str, optional
-        Glean instance / sub-domain (``GLEAN_INSTANCE``).
+        (Deprecated) Glean instance / sub-domain (``GLEAN_INSTANCE``). Use server_url instead.
     act_as : str, optional
         Email to impersonate when using a global token (``GLEAN_ACT_AS``).
     chat_id : str, optional
@@ -71,7 +75,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         from langchain_glean.chat_models import ChatGlean
 
         chat = ChatGlean()                      # reads env-vars
-        chat = ChatGlean(api_token="token", instance="acme")
+        chat = ChatGlean(api_token="token", server_url="https://your-company-be.glean.com")
 
     Invoke
     ------
@@ -267,7 +271,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
             params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 headers = self._http_headers()
                 response = g.client.chat.create(
                     messages=params.messages,
@@ -360,7 +364,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
             params = self._build_chat_params(cast(List[BaseMessage], messages), **kwargs)
 
         try:
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 headers = self._http_headers()
                 response = await g.client.chat.create_async(
                     messages=params.messages,
@@ -455,7 +459,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         params.stream = True
 
         try:
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 headers = self._http_headers()
                 response_stream = g.client.chat.create_stream(
                     messages=params.messages,
@@ -548,7 +552,7 @@ class ChatGlean(GleanAPIClientMixin, BaseChatModel):
         params.stream = True
 
         try:
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 headers = self._http_headers()
                 response_stream = await g.client.chat.create_stream_async(
                     messages=params.messages,

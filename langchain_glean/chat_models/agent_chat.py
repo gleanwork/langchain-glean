@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, cast
 
-from glean.api_client import Glean, errors, models
+from glean.api_client import errors, models
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -40,7 +40,7 @@ class ChatGleanAgent(GleanAPIClientMixin, BaseChatModel):
             fields["input"] = user_input
 
         try:
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 response = g.client.agents.run(agent_id=self.agent_id, input=fields)
         except errors.GleanError as e:
             raise ValueError(f"Glean client error: {e}") from e
@@ -97,7 +97,7 @@ class ChatGleanAgent(GleanAPIClientMixin, BaseChatModel):
             fields["input"] = user_input
 
         try:
-            with Glean(api_token=self.api_token, instance=self.instance) as g:
+            with self._build_glean_client() as g:
                 response = await g.client.agents.run_async(agent_id=self.agent_id, input=fields)
         except errors.GleanError as e:
             raise ValueError(f"Glean client error: {e}") from e
