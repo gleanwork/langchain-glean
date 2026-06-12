@@ -324,3 +324,17 @@ chat.invoke([HumanMessage(content="Continue...")])
 * Glean API – <https://developer.glean.com>
 * LangChain docs – <https://python.langchain.com>
 * Source code – <https://github.com/langchain-ai/langchain-glean>
+
+<!-- configure-agents:skills start -->
+
+## Agent skills
+
+This repository ships agent skill(s) under `skills/`. Install them into your
+AI agent with [`npx skills`](https://github.com/agentskills/agentskills):
+
+```sh
+npx skills add -g gleanwork/langchain-glean   # global — available in every repo
+npx skills add gleanwork/langchain-glean      # or scoped to the current repo
+```
+
+<!-- configure-agents:skills end -->
