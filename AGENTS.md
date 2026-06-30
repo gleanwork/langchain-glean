@@ -81,4 +81,4 @@ See `pyproject.toml` for current dependency versions. Key dependencies:
 
 ## Skills
 
-This repository ships an agent skill at `skills/SKILL.md`. Keep it accurate as the public API changes.
+This repository ships an agent skill at `skills/langchain-glean/SKILL.md`. Keep it accurate as the public API changes.
