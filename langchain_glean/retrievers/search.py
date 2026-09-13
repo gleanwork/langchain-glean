@@ -35,6 +35,19 @@ class SearchBasicRequest(BaseModel):
             return None
 
 
+def _datasource_request_options(data_sources: Iterable[str]) -> models.SearchRequestOptions:
+    """Build the request options that restrict a search to *data_sources*."""
+    return models.SearchRequestOptions(
+        facet_bucket_size=10,
+        facet_filters=[
+            models.FacetFilter(
+                field_name="datasource",
+                values=[models.FacetFilterValue(value=ds, relation_type=models.RelationType.EQUALS) for ds in data_sources],
+            )
+        ],
+    )
+
+
 class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
     """Retriever that uses Glean's search API via the Glean client.
 
@@ -218,6 +231,9 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
 
         If ``query`` is a :class:`SearchBasicRequest` instance we ignore ``kwargs`` – everything is
         encoded in that object.
+
+        In the kwargs style, ``data_sources`` becomes the same datasource facet filter that
+        :class:`SearchBasicRequest` produces. An explicit ``request_options`` takes precedence.
         """
 
         if isinstance(query, models.SearchRequest):
@@ -229,15 +245,7 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             sr = models.SearchRequest(query=data.query)
 
             if data.data_sources:
-                sr.request_options = models.SearchRequestOptions(
-                    facet_bucket_size=10,
-                    facet_filters=[
-                        models.FacetFilter(
-                            field_name="datasource",
-                            values=[models.FacetFilterValue(value=ds, relation_type=models.RelationType.EQUALS) for ds in data.data_sources],
-                        )
-                    ],
-                )
+                sr.request_options = _datasource_request_options(data.data_sources)
 
             return sr
 
@@ -260,6 +268,9 @@ class GleanSearchRetriever(GleanAPIClientMixin, BaseRetriever):
             search_request.tracking_token = kwargs["tracking_token"]
         if "timeout_millis" in kwargs:
             search_request.timeout_millis = kwargs["timeout_millis"]
+
+        if kwargs.get("data_sources"):
+            search_request.request_options = _datasource_request_options(kwargs["data_sources"])
 
         if "request_options" in kwargs:
             search_request.request_options = kwargs["request_options"]
