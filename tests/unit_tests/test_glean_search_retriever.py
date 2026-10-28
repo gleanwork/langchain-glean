@@ -12,7 +12,7 @@ from glean.api_client.models import (
 )
 from langchain_core.documents import Document
 
-from langchain_glean.retrievers.search import GleanSearchRetriever
+from langchain_glean.retrievers.search import GleanSearchRetriever, SearchBasicRequest
 
 
 class TestGleanSearchRetriever:
@@ -235,6 +235,44 @@ class TestGleanSearchRetriever:
 
         # Verify the search call
         self.mock_glean.return_value.__enter__.return_value.client.search.query.assert_called_once()
+
+    def test_build_search_request_with_basic_request_data_sources(self):
+        """Test that a SearchBasicRequest turns data_sources into a datasource facet filter."""
+        request = self.retriever._build_search_request(SearchBasicRequest(query="test query", data_sources=["slack", "drive"]))
+
+        assert request.query == "test query"
+
+        facet_filters = request.request_options.facet_filters
+        assert len(facet_filters) == 1
+        assert facet_filters[0].field_name == "datasource"
+        assert [value.value for value in facet_filters[0].values] == ["slack", "drive"]
+        assert all(value.relation_type == RelationType.EQUALS for value in facet_filters[0].values)
+
+    def test_build_search_request_with_data_sources_kwarg(self):
+        """Test that a data_sources keyword argument produces the same facet filter."""
+        request = self.retriever._build_search_request("test query", data_sources=["slack", "drive"])
+
+        facet_filters = request.request_options.facet_filters
+        assert len(facet_filters) == 1
+        assert facet_filters[0].field_name == "datasource"
+        assert [value.value for value in facet_filters[0].values] == ["slack", "drive"]
+
+    def test_build_search_request_prefers_explicit_request_options(self):
+        """Test that an explicit request_options overrides data_sources."""
+        request_options = SearchRequestOptions(datasources_filter=["confluence"], facet_bucket_size=20)
+
+        request = self.retriever._build_search_request("test query", data_sources=["slack"], request_options=request_options)
+
+        assert request.request_options is request_options
+
+    def test_invoke_with_data_sources_kwarg(self):
+        """Test that data_sources reaches the Glean search call."""
+        _ = self.retriever.invoke("test query", data_sources=["slack"])
+
+        call_args = self.mock_glean.return_value.__enter__.return_value.client.search.query.call_args
+        facet_filters = call_args[1]["request_options"].facet_filters
+        assert facet_filters[0].field_name == "datasource"
+        assert [value.value for value in facet_filters[0].values] == ["slack"]
 
     async def test_ainvoke_with_native_search_request(self):
         """Test async invoking with a native SearchRequest object."""
